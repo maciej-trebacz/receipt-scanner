@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -23,8 +22,14 @@ import {
   Edit02Icon,
   Delete02Icon,
   RefreshIcon,
+  Store01Icon,
+  Location01Icon,
+  Calendar03Icon,
+  PackageIcon,
+  Note01Icon,
 } from "@hugeicons/core-free-icons";
 import { use } from "react";
+import { cn } from "@/lib/utils";
 
 // Parse bounding box from JSON string to array
 function parseBoundingBox(boxStr: string | null): [number, number, number, number] | null {
@@ -45,7 +50,7 @@ interface ReceiptItem {
   name: string;
   inferredName: string | null;
   productType: string | null;
-  boundingBox: string | null; // JSON string from DB
+  boundingBox: string | null;
   quantity: number;
   unitPrice: number | null;
   totalPrice: number;
@@ -173,10 +178,10 @@ export default function ReceiptDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container px-4 py-8">
-          <div className="h-8 w-32 bg-muted animate-pulse rounded mb-6" />
-          <div className="h-64 bg-muted animate-pulse rounded" />
+      <div className="min-h-screen">
+        <div className="container px-6 py-12 flex flex-col items-center">
+          <div className="size-20 rounded-full border-4 border-primary border-t-transparent animate-spin mb-8" />
+          <p className="text-muted-foreground font-medium animate-pulse">Loading receipt details...</p>
         </div>
       </div>
     );
@@ -184,13 +189,18 @@ export default function ReceiptDetailPage({
 
   if (error || !receipt) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container px-4 py-8 text-center">
-          <p className="text-destructive">{error || "Receipt not found"}</p>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="glass-card p-12 text-center max-w-md">
+          <div className="size-16 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-6">
+            <HugeiconsIcon icon={Delete02Icon} className="size-8" />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight mb-2">Oops!</h2>
+          <p className="text-muted-foreground mb-8">
+            {error || "We couldn't find the receipt you're looking for."}
+          </p>
           <Button
-            variant="outline"
-            className="mt-4"
             onClick={() => router.push("/receipts")}
+            className="w-full h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl"
           >
             Back to Receipts
           </Button>
@@ -201,13 +211,13 @@ export default function ReceiptDetailPage({
 
   if (isEditing) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
-          <div className="container px-4 py-4">
-            <h1 className="text-xl font-semibold">Edit Receipt</h1>
+      <div className="min-h-screen">
+        <header className="sticky top-0 z-30 glass">
+          <div className="container px-6 py-6 border-b border-border/50">
+            <h1 className="text-2xl font-black tracking-tight">Edit Transaction</h1>
           </div>
         </header>
-        <main className="container px-4 py-6">
+        <main className="container px-6 py-8 pb-32">
           <ReceiptForm
             initialData={{
               storeName: receipt.storeName || "",
@@ -242,57 +252,55 @@ export default function ReceiptDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
-        <div className="container px-4 py-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-30 glass backdrop-blur-2xl">
+        <div className="container px-6 py-5 flex items-center justify-between">
+          <button
             onClick={() => router.push("/receipts")}
+            className="size-10 rounded-xl bg-background/50 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-all active:scale-95"
           >
-            <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4 mr-1" />
-            Back
-          </Button>
+            <HugeiconsIcon icon={ArrowLeft02Icon} className="size-5 stroke-[2.5]" />
+          </button>
+
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={handleReanalyze}
               disabled={isReanalyzing}
+              className="size-10 rounded-xl bg-background/50 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-all active:scale-95 disabled:opacity-50"
+              title="Re-analyze"
             >
               <HugeiconsIcon
                 icon={RefreshIcon}
-                className={`size-4 mr-1 ${isReanalyzing ? "animate-spin" : ""}`}
+                className={cn("size-5 stroke-[2.5]", isReanalyzing && "animate-spin")}
               />
-              {isReanalyzing ? "Analyzing..." : "Re-analyze"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+            </button>
+            <button
               onClick={() => setIsEditing(true)}
+              className="size-10 rounded-xl bg-background/50 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-all active:scale-95"
+              title="Edit"
             >
-              <HugeiconsIcon icon={Edit02Icon} className="size-4 mr-1" />
-              Edit
-            </Button>
+              <HugeiconsIcon icon={Edit02Icon} className="size-5 stroke-[2.5]" />
+            </button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" disabled={isDeleting}>
-                  <HugeiconsIcon icon={Delete02Icon} className="size-4 mr-1" />
-                  Delete
-                </Button>
+                <button
+                  className="size-10 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center transition-all active:scale-95 disabled:opacity-50"
+                  disabled={isDeleting}
+                  title="Delete"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} className="size-5 stroke-[2.5]" />
+                </button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="glass border-border/50 rounded-3xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Receipt?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    the receipt and all its items.
+                  <AlertDialogTitle className="text-2xl font-black">Delete Receipt?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    This action is permanent. All associated items and data will be removed from your records.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>
+                <AlertDialogFooter className="gap-3">
+                  <AlertDialogCancel className="rounded-2xl h-12 font-bold">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="rounded-2xl h-12 bg-destructive text-destructive-foreground font-black uppercase tracking-widest">
                     Delete
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -302,172 +310,165 @@ export default function ReceiptDetailPage({
         </div>
       </header>
 
-      <main className="container px-4 py-6">
-        {/* Desktop: Split layout | Mobile: Stacked */}
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Left: Receipt Image (sticky on desktop) */}
+      <main className="container px-6 py-8">
+        <div className="flex flex-col lg:flex-row gap-10">
+          {/* Left: Receipt Image */}
           {receipt.imagePath && (
-            <div className="md:w-1/2 lg:w-2/5">
-              <div className="md:sticky md:top-20">
-                <Card>
-                  <CardContent className="p-2">
-                    <div ref={imageContainerRef} className="relative">
-                      <img
-                        src={`/api/image${receipt.imagePath}`}
-                        alt="Receipt"
-                        className="w-full object-contain rounded-lg"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                      {/* Bounding box overlay */}
-                      {hoveredItemId && (() => {
-                        const item = receipt.items.find(i => i.id === hoveredItemId);
-                        const box = item ? parseBoundingBox(item.boundingBox) : null;
-                        if (!box) return null;
-                        // box is [ymin, xmin, ymax, xmax] in 0-1000 scale
-                        const [ymin, xmin, ymax, xmax] = box;
-                        return (
-                          <div
-                            className="absolute border-2 border-primary bg-primary/20 pointer-events-none transition-all duration-150"
-                            style={{
-                              top: `${ymin / 10}%`,
-                              left: `${xmin / 10}%`,
-                              width: `${(xmax - xmin) / 10}%`,
-                              height: `${(ymax - ymin) / 10}%`,
-                            }}
-                          />
-                        );
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="lg:w-[450px] shrink-0">
+              <div className="lg:sticky lg:top-28">
+                <div className="glass-card p-3 rounded-[2.5rem] shadow-2xl relative group">
+                  <div ref={imageContainerRef} className="relative overflow-hidden rounded-[2rem]">
+                    <img
+                      src={`/api/image${receipt.imagePath}`}
+                      alt="Receipt"
+                      className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).parentElement!.style.display = "none";
+                      }}
+                    />
+
+                    {/* Bounding box overlay with glow */}
+                    {hoveredItemId && (() => {
+                      const item = receipt.items.find(i => i.id === hoveredItemId);
+                      const box = item ? parseBoundingBox(item.boundingBox) : null;
+                      if (!box) return null;
+                      const [ymin, xmin, ymax, xmax] = box;
+                      return (
+                        <div
+                          className="absolute border-2 border-primary bg-primary/20 pointer-events-none transition-all duration-300 shadow-[0_0_20px_var(--primary)]"
+                          style={{
+                            top: `${ymin / 10}%`,
+                            left: `${xmin / 10}%`,
+                            width: `${(xmax - xmin) / 10}%`,
+                            height: `${(ymax - ymin) / 10}%`,
+                          }}
+                        />
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* Right: Receipt Data */}
-          <div className={`flex-1 space-y-6 ${receipt.imagePath ? '' : 'max-w-2xl mx-auto'}`}>
-            {/* Store Info */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
+          <div className="flex-1 space-y-8">
+            {/* Summary Card */}
+            <div className="glass-card p-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-8 border-b border-border/50">
+                <div className="flex items-start gap-5">
+                  <div className="size-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <HugeiconsIcon icon={Store01Icon} className="size-8" />
+                  </div>
                   <div>
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-3xl font-black tracking-tight leading-none mb-2">
                       {receipt.storeName || "Unknown Store"}
                     </h2>
-                    {receipt.storeAddress && (
-                      <p className="text-sm text-muted-foreground">
-                        {receipt.storeAddress}
+                    <div className="flex flex-col gap-1">
+                      {receipt.storeAddress && (
+                        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <HugeiconsIcon icon={Location01Icon} className="size-3.5" />
+                          {receipt.storeAddress}
+                        </p>
+                      )}
+                      <p className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+                        <HugeiconsIcon icon={Calendar03Icon} className="size-3.5" />
+                        {formatDate(receipt.date)}
                       </p>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {formatDate(receipt.date)}
-                    </p>
+                    </div>
                   </div>
-                  {receipt.categoryName && (
-                    <Badge
-                      style={{
-                        borderColor: receipt.categoryColor || undefined,
-                        color: receipt.categoryColor || undefined,
-                      }}
-                    >
-                      {receipt.categoryName}
-                    </Badge>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Items */}
-            {receipt.items.length > 0 && (
-              <Card>
-                <CardContent className="p-4">
-                  <h3 className="font-medium mb-3">Items</h3>
-                  <div className="space-y-2">
+                <div className="text-right">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-1">Total Amount</p>
+                  <p className="text-4xl font-black tracking-tighter text-glow">
+                    {formatCurrency(receipt.total, receipt.currency || "PLN")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items List */}
+              {receipt.items.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Purchased Items</h3>
+                  <div className="grid gap-2">
                     {receipt.items.map((item) => {
                       const hasBox = parseBoundingBox(item.boundingBox) !== null;
                       return (
                         <div
                           key={item.id}
-                          className={`flex items-center justify-between py-2 border-b last:border-0 transition-colors ${
-                            hasBox ? 'cursor-pointer hover:bg-muted/50 -mx-2 px-2 rounded' : ''
-                          } ${hoveredItemId === item.id ? 'bg-primary/10' : ''}`}
+                          className={cn(
+                            "flex items-center justify-between p-4 rounded-2xl glass transition-all duration-300 border-transparent",
+                            hasBox && "cursor-pointer hover:border-primary/30 hover:bg-primary/5 hover:translate-x-1",
+                            hoveredItemId === item.id && "border-primary/50 bg-primary/10 translate-x-1"
+                          )}
                           onMouseEnter={() => hasBox && setHoveredItemId(item.id)}
                           onMouseLeave={() => setHoveredItemId(null)}
                         >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p
-                                className="font-medium cursor-help"
-                                title={item.name !== item.inferredName ? `Raw: ${item.name}` : undefined}
-                              >
-                                {item.inferredName || item.name}
-                              </p>
-                              {item.productType && (
-                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                  {item.productType}
-                                </span>
+                          <div className="flex items-center gap-4">
+                            <div className="size-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground">
+                              <HugeiconsIcon icon={PackageIcon} className="size-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold leading-tight">
+                                  {item.inferredName || item.name}
+                                </p>
+                                {item.productType && (
+                                  <span className="text-[10px] font-black uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-md">
+                                    {item.productType}
+                                  </span>
+                                )}
+                              </div>
+                              {item.quantity !== 1 && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {item.quantity} × {item.unitPrice ? formatCurrency(item.unitPrice, receipt.currency || "PLN") : "-"}
+                                </p>
                               )}
                             </div>
-                            {item.quantity !== 1 && (
-                              <p className="text-sm text-muted-foreground">
-                                {item.quantity} x{" "}
-                                {item.unitPrice
-                                  ? formatCurrency(item.unitPrice, receipt.currency || "PLN")
-                                  : ""}
-                              </p>
-                            )}
                           </div>
-                          <p className="font-medium">
+                          <p className="font-black text-lg">
                             {formatCurrency(item.totalPrice, receipt.currency || "PLN")}
                           </p>
                         </div>
                       );
                     })}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Totals */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  {receipt.subtotal !== null && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>
-                        {formatCurrency(receipt.subtotal, receipt.currency || "PLN")}
-                      </span>
-                    </div>
-                  )}
-                  {receipt.tax !== null && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tax</span>
-                      <span>
-                        {formatCurrency(receipt.tax, receipt.currency || "PLN")}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-lg font-semibold pt-2 border-t">
-                    <span>Total</span>
-                    <span>
-                      {formatCurrency(receipt.total, receipt.currency || "PLN")}
-                    </span>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
 
-            {/* Notes */}
+              {/* Breakdown */}
+              <div className="mt-10 pt-8 border-t border-border/50 space-y-3">
+                {receipt.subtotal !== null && (
+                  <div className="flex justify-between items-center text-sm font-medium">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatCurrency(receipt.subtotal, receipt.currency || "PLN")}</span>
+                  </div>
+                )}
+                {receipt.tax !== null && (
+                  <div className="flex justify-between items-center text-sm font-medium">
+                    <span className="text-muted-foreground">Tax</span>
+                    <span>{formatCurrency(receipt.tax, receipt.currency || "PLN")}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-4">
+                  <span className="text-lg font-black uppercase tracking-widest text-primary">Final Price</span>
+                  <span className="text-2xl font-black">{formatCurrency(receipt.total, receipt.currency || "PLN")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes Section */}
             {receipt.notes && (
-              <Card>
-                <CardContent className="p-4">
-                  <h3 className="font-medium mb-2">Notes</h3>
-                  <p className="text-sm text-muted-foreground">{receipt.notes}</p>
-                </CardContent>
-              </Card>
+              <div className="glass-card p-6">
+                <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-muted-foreground mb-4">
+                  <HugeiconsIcon icon={Note01Icon} className="size-4" />
+                  General Notes
+                </h3>
+                <p className="text-muted-foreground leading-relaxed italic">
+                  "{receipt.notes}"
+                </p>
+              </div>
             )}
           </div>
         </div>

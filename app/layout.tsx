@@ -35,10 +35,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={nunitoSans.variable}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary/30 min-h-screen`}
       >
-        <div className="pb-16 md:pb-0">{children}</div>
-        <NavBar />
+        <div className="bg-noise" />
+        <div className="relative flex flex-col min-h-screen">
+          <main className="flex-1 pb-24 md:pb-0">{children}</main>
+          <NavBar />
+        </div>
       </body>
     </html>
   );

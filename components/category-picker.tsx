@@ -37,29 +37,23 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
 
   if (loading) {
     return (
-      <Select disabled>
-        <SelectTrigger>
-          <SelectValue placeholder="Loading..." />
-        </SelectTrigger>
-      </Select>
+      <div className="h-12 w-full rounded-xl bg-muted/20 animate-pulse" />
     );
   }
 
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger>
+      <SelectTrigger className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary transition-all px-4 font-medium">
         <SelectValue placeholder="Select category" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="glass border-border/50 rounded-2xl">
         {categories.map((cat) => (
-          <SelectItem key={cat.id} value={cat.id}>
+          <SelectItem key={cat.id} value={cat.id} className="focus:bg-primary/10 focus:text-primary rounded-xl mx-1 my-0.5">
             <span className="flex items-center gap-2">
-              {cat.color && (
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: cat.color }}
-                />
-              )}
+              <div
+                className="size-2.5 rounded-full shadow-[0_0_8px_currentColor]"
+                style={{ color: cat.color || 'var(--primary)', backgroundColor: 'currentColor' }}
+              />
               {cat.name}
             </span>
           </SelectItem>

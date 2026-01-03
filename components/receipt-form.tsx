@@ -6,10 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Field } from "@/components/ui/field";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CategoryPicker } from "./category-picker";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import {
+  Delete02Icon,
+  PlusSignIcon,
+  Store01Icon,
+  Calendar03Icon,
+  Invoice01Icon,
+  Note01Icon,
+  PercentIcon,
+  Tag01Icon
+} from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
 
 interface ReceiptItem {
   name: string;
@@ -103,238 +112,236 @@ export function ReceiptForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Store Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Store Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Field>
-            <Label htmlFor="storeName">Store Name</Label>
-            <Input
-              id="storeName"
-              value={formData.storeName}
-              onChange={(e) => handleChange("storeName", e.target.value)}
-              placeholder="e.g., Biedronka"
-            />
-          </Field>
-          <Field>
-            <Label htmlFor="storeAddress">Address</Label>
-            <Input
-              id="storeAddress"
-              value={formData.storeAddress}
-              onChange={(e) => handleChange("storeAddress", e.target.value)}
-              placeholder="e.g., ul. Marszałkowska 1"
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-10">
+      {/* Basic Info Section */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2 text-primary">
+          <HugeiconsIcon icon={Store01Icon} className="size-5" />
+          <h3 className="text-sm font-black uppercase tracking-widest">Store & Date</h3>
+        </div>
+
+        <div className="glass-card p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Field>
-              <Label htmlFor="date">Date</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-1.5 block">Store Name</Label>
               <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => handleChange("date", e.target.value)}
+                value={formData.storeName}
+                onChange={(e) => handleChange("storeName", e.target.value)}
+                placeholder="e.g., Apple Store"
+                className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary transition-all px-4 font-medium"
               />
             </Field>
             <Field>
-              <Label htmlFor="category">Category</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-1.5 block">Address</Label>
+              <Input
+                value={formData.storeAddress}
+                onChange={(e) => handleChange("storeAddress", e.target.value)}
+                placeholder="e.g., 5th Ave, NY"
+                className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary transition-all px-4 font-medium"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Field>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-1.5 block">Purchase Date</Label>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleChange("date", e.target.value)}
+                  className="h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary transition-all px-4 font-medium block w-full"
+                />
+              </div>
+            </Field>
+            <Field>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-1.5 block">Spend Category</Label>
               <CategoryPicker
                 value={formData.categoryId}
                 onChange={(id) => handleChange("categoryId", id)}
               />
             </Field>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Items */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Items</CardTitle>
-          <Button
+      {/* Items Section */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-primary">
+            <HugeiconsIcon icon={Invoice01Icon} className="size-5" />
+            <h3 className="text-sm font-black uppercase tracking-widest">Line Items</h3>
+          </div>
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={addItem}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all active:scale-95 text-xs font-black uppercase tracking-wider"
           >
-            <HugeiconsIcon icon={PlusSignIcon} className="size-4 mr-1" />
+            <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
             Add Item
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
+          </button>
+        </div>
+
+        <div className="space-y-3">
           {formData.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No items added yet
-            </p>
+            <div className="glass-card p-12 text-center border-dashed border-2">
+              <p className="text-muted-foreground italic">No items identified yet.</p>
+            </div>
           ) : (
             formData.items.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg"
-              >
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      value={item.inferredName ?? ""}
-                      onChange={(e) =>
-                        handleItemChange(index, "inferredName", e.target.value || null)
-                      }
-                      placeholder="Item name"
-                      className="flex-1"
-                    />
-                    <Input
-                      value={item.productType ?? ""}
-                      onChange={(e) =>
-                        handleItemChange(index, "productType", e.target.value || null)
-                      }
-                      placeholder="Type"
-                      className="w-24"
-                    />
+              <div key={index} className="glass-card p-5 group relative animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 space-y-4">
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <Input
+                          value={item.inferredName ?? ""}
+                          onChange={(e) => handleItemChange(index, "inferredName", e.target.value || null)}
+                          placeholder="Item description"
+                          className="h-10 rounded-lg bg-background/30 border-transparent focus:border-primary/30 font-bold"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <Input
+                          value={item.productType ?? ""}
+                          onChange={(e) => handleItemChange(index, "productType", e.target.value || null)}
+                          placeholder="Type"
+                          className="h-10 rounded-lg bg-background/30 border-transparent text-xs font-black uppercase tracking-widest text-center"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-muted-foreground uppercase ml-1">Qty</span>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(index, "quantity", Number(e.target.value))}
+                          className="h-10 rounded-lg bg-background/20 border-transparent text-center font-medium"
+                          step={0.001}
+                        />
+                      </div>
+                      <div className="space-y-1 text-center font-medium text-muted-foreground pt-4 select-none">×</div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-muted-foreground uppercase ml-1">Unit Price</span>
+                        <Input
+                          type="number"
+                          value={item.unitPrice ?? ""}
+                          onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Number(e.target.value) : null)}
+                          className="h-10 rounded-lg bg-background/20 border-transparent text-right font-medium"
+                          step={0.01}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-primary uppercase ml-1">Total</span>
+                        <Input
+                          type="number"
+                          value={item.totalPrice}
+                          onChange={(e) => handleItemChange(index, "totalPrice", Number(e.target.value))}
+                          className="h-10 rounded-lg bg-primary/10 border-transparent text-right font-black text-primary"
+                          step={0.01}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  {item.name && item.name !== item.inferredName && (
-                    <p className="text-xs text-muted-foreground px-1" title="Raw name from receipt">
-                      Raw: {item.name}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleItemChange(index, "quantity", Number(e.target.value))
-                      }
-                      placeholder="Qty"
-                      min={0.001}
-                      step={0.001}
-                    />
-                    <Input
-                      type="number"
-                      value={item.unitPrice ?? ""}
-                      onChange={(e) =>
-                        handleItemChange(
-                          index,
-                          "unitPrice",
-                          e.target.value ? Number(e.target.value) : null
-                        )
-                      }
-                      placeholder="Unit price"
-                      min={0}
-                      step={0.01}
-                    />
-                    <Input
-                      type="number"
-                      value={item.totalPrice}
-                      onChange={(e) =>
-                        handleItemChange(index, "totalPrice", Number(e.target.value))
-                      }
-                      placeholder="Total"
-                      min={0}
-                      step={0.01}
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="size-10 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all active:scale-95 self-start"
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} className="size-5" />
+                  </button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeItem(index)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                </Button>
               </div>
             ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Totals */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Totals</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+      {/* Financials Section */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2 text-primary">
+          <HugeiconsIcon icon={Tag01Icon} className="size-5" />
+          <h3 className="text-sm font-black uppercase tracking-widest">Financial Summary</h3>
+        </div>
+
+        <div className="glass-card p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Field>
-              <Label htmlFor="subtotal">Subtotal</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-2 block">Net Subtotal</Label>
               <Input
-                id="subtotal"
                 type="number"
                 value={formData.subtotal ?? ""}
-                onChange={(e) =>
-                  handleChange(
-                    "subtotal",
-                    e.target.value ? Number(e.target.value) : null
-                  )
-                }
-                placeholder="0.00"
-                min={0}
+                onChange={(e) => handleChange("subtotal", e.target.value ? Number(e.target.value) : null)}
+                className="h-14 rounded-2xl bg-background/50 border-border/50 font-bold px-4"
                 step={0.01}
               />
             </Field>
             <Field>
-              <Label htmlFor="tax">Tax</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1 mb-2 block flex items-center gap-1">
+                <HugeiconsIcon icon={PercentIcon} className="size-3" />
+                Tax Amount
+              </Label>
               <Input
-                id="tax"
                 type="number"
                 value={formData.tax ?? ""}
-                onChange={(e) =>
-                  handleChange("tax", e.target.value ? Number(e.target.value) : null)
-                }
-                placeholder="0.00"
-                min={0}
+                onChange={(e) => handleChange("tax", e.target.value ? Number(e.target.value) : null)}
+                className="h-14 rounded-2xl bg-background/50 border-border/50 font-bold px-4"
                 step={0.01}
               />
             </Field>
             <Field>
-              <Label htmlFor="total">Total *</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-primary ml-1 mb-2 block">Grand Total</Label>
               <Input
-                id="total"
                 type="number"
                 value={formData.total}
                 onChange={(e) => handleChange("total", Number(e.target.value))}
-                placeholder="0.00"
-                min={0}
+                className="h-14 rounded-2xl bg-primary/10 border-primary/30 font-black text-2xl text-primary px-4 shadow-[0_0_20px_var(--primary-foreground)]"
                 step={0.01}
                 required
               />
             </Field>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Notes Section */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-2 text-primary">
+          <HugeiconsIcon icon={Note01Icon} className="size-5" />
+          <h3 className="text-sm font-black uppercase tracking-widest">Additional Notes</h3>
+        </div>
+        <div className="glass-card p-6">
           <Textarea
             value={formData.notes}
             onChange={(e) => handleChange("notes", e.target.value)}
-            placeholder="Add any notes..."
-            rows={3}
+            placeholder="Add any additional context or labels..."
+            className="min-h-[120px] rounded-2xl bg-background/30 border-border/50 focus:border-primary p-4 resize-none leading-relaxed"
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Actions */}
-      <div className="flex gap-3">
+      {/* Fixed Footer Actions */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 glass md:relative md:bottom-auto md:bg-transparent md:border-0 md:p-0 flex gap-4 z-40">
         {onCancel && (
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={onCancel}
-            className="flex-1"
+            className="flex-1 h-14 glass text-foreground font-bold rounded-2xl active:scale-95 transition-all"
             disabled={isLoading}
           >
             Cancel
-          </Button>
+          </button>
         )}
-        <Button type="submit" className="flex-1" disabled={isLoading}>
-          {isLoading ? "Saving..." : "Save Receipt"}
-        </Button>
+        <button
+          type="submit"
+          className="flex-[2] h-14 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-3"
+          disabled={isLoading}
+        >
+          {isLoading && <HugeiconsIcon icon={PlusSignIcon} className="size-5 animate-spin" />}
+          {isLoading ? "Finalizing..." : "Save Transaction"}
+        </button>
       </div>
     </form>
   );

@@ -8,21 +8,24 @@ import {
   Home01Icon,
   Invoice01Icon,
   Analytics01Icon,
+  Add01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 
 const navItems = [
   { href: "/", icon: Home01Icon, label: "Home" },
   { href: "/receipts", icon: Invoice01Icon, label: "Receipts" },
   { href: "/reports", icon: Analytics01Icon, label: "Reports" },
+  { href: "/profile", icon: UserCircleIcon, label: "Profile" },
 ];
 
 export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t md:hidden">
-      <div className="flex items-center justify-around h-16">
-        {navItems.map((item) => {
+    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:hidden">
+      <nav className="glass h-16 w-full max-w-md rounded-2xl flex items-center justify-between px-2 shadow-2xl">
+        {navItems.slice(0, 2).map((item) => {
           const isActive =
             item.href === "/"
               ? pathname === "/"
@@ -33,21 +36,53 @@ export function NavBar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors",
+                "flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-xl transition-all duration-300",
                 isActive
-                  ? "text-primary"
+                  ? "text-primary scale-110"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <HugeiconsIcon
                 icon={item.icon}
-                className={cn("size-6", isActive && "stroke-[2.5]")}
+                className={cn("size-5", isActive && "stroke-[2.5]")}
               />
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             </Link>
           );
         })}
-      </div>
-    </nav>
+
+        {/* Central Scan FAB */}
+        <Link
+          href="/"
+          className="relative -mt-12 flex items-center justify-center size-16 bg-primary rounded-2xl shadow-xl shadow-primary/40 border-4 border-background transition-transform duration-300 hover:scale-110 active:scale-95 group"
+        >
+          <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+          <HugeiconsIcon icon={Add01Icon} className="size-8 text-primary-foreground stroke-[3]" />
+        </Link>
+
+        {navItems.slice(2).map((item) => {
+          const isActive = pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 flex-1 py-1 rounded-xl transition-all duration-300",
+                isActive
+                  ? "text-primary scale-110"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <HugeiconsIcon
+                icon={item.icon}
+                className={cn("size-5", isActive && "stroke-[2.5]")}
+              />
+              <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

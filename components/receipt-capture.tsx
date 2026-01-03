@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Camera01Icon,
@@ -10,7 +9,9 @@ import {
   Loading03Icon,
   Cancel01Icon,
   Tick02Icon,
+  Invoice01Icon,
 } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
 
 interface ReceiptCaptureProps {
   onCapture: (file: File) => void;
@@ -32,7 +33,6 @@ export function ReceiptCapture({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
@@ -57,97 +57,118 @@ export function ReceiptCapture({
   };
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-4">
-        {/* Hidden file inputs */}
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="hidden"
-          aria-label="Capture from camera"
-        />
-        <input
-          ref={galleryInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-          aria-label="Select from gallery"
-        />
+    <div className="w-full">
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+        aria-label="Capture from camera"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+        aria-label="Select from gallery"
+      />
 
-        {!preview ? (
-          // Capture buttons
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground text-center mb-2">
-              Scan a receipt to get started
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex-1 h-14"
-                size="lg"
-              >
-                <HugeiconsIcon icon={Camera01Icon} className="size-5 mr-2" />
-                Camera
-              </Button>
-              <Button
-                onClick={() => galleryInputRef.current?.click()}
-                variant="outline"
-                className="flex-1 h-14"
-                size="lg"
-              >
-                <HugeiconsIcon icon={Image01Icon} className="size-5 mr-2" />
-                Gallery
-              </Button>
-            </div>
+      {!preview ? (
+        <div className="glass-card p-8 flex flex-col items-center text-center">
+          <div className="size-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-6 animate-float">
+            <HugeiconsIcon icon={Invoice01Icon} className="size-12" />
           </div>
-        ) : (
-          // Preview with actions
-          <div className="flex flex-col gap-3">
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-muted">
-              <img
-                src={preview}
-                alt="Receipt preview"
-                className="h-full w-full object-contain"
-              />
-              {isLoading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="text-white text-center">
-                    <HugeiconsIcon icon={Loading03Icon} className="size-8 animate-spin mx-auto mb-2" />
-                    <p className="text-sm">Scanning receipt...</p>
+          <h2 className="text-2xl font-black tracking-tight mb-2">Ready to scan?</h2>
+          <p className="text-muted-foreground mb-8 max-w-[240px]">
+            Take a photo or upload an image of your receipt.
+          </p>
+          <div className="flex flex-col w-full gap-3">
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-full h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <HugeiconsIcon icon={Camera01Icon} className="size-6 stroke-[2.5]" />
+              Start Camera
+            </button>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="w-full h-14 glass text-foreground font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <HugeiconsIcon icon={Image01Icon} className="size-6" />
+              Upload Gallery
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl glass shadow-2xl">
+            <img
+              src={preview}
+              alt="Receipt preview"
+              className={cn(
+                "h-full w-full object-contain transition-all duration-700",
+                isLoading && "opacity-50 blur-sm scale-95"
+              )}
+            />
+            {isLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="relative size-24 mb-6">
+                  <div className="absolute inset-0 border-4 border-primary rounded-full animate-ping opacity-25" />
+                  <div className="absolute inset-2 border-4 border-primary rounded-full animate-pulse" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <HugeiconsIcon icon={Loading03Icon} className="size-10 text-primary animate-spin" />
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={handleClear}
-                variant="outline"
-                className="flex-1"
-                disabled={isLoading}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-4 mr-2" />
-                Retake
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                className="flex-1"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="size-4 mr-2 animate-spin" />
-                ) : (
-                  <HugeiconsIcon icon={Tick02Icon} className="size-4 mr-2" />
-                )}
-                {isLoading ? "Scanning..." : "Scan"}
-              </Button>
-            </div>
+                <h3 className="text-primary font-black uppercase tracking-[0.3em] text-glow">Analyzing</h3>
+                <p className="text-white/60 text-xs mt-2 font-medium">Extracting data with AI...</p>
+              </div>
+            )}
+
+            {/* Animated Scanning Line */}
+            {isLoading && (
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-primary shadow-[0_0_15px_var(--primary)] animate-[scan_2s_linear_infinite]"
+                style={{
+                  animationName: 'scan'
+                }}
+              />
+            )}
+            <style dangerouslySetInnerHTML={{
+              __html: `
+              @keyframes scan {
+                0% { top: 0% }
+                100% { top: 100% }
+              }
+            `}} />
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <div className="flex gap-4">
+            <button
+              onClick={handleClear}
+              className="flex-1 h-14 glass text-foreground font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+              disabled={isLoading}
+            >
+              <HugeiconsIcon icon={Cancel01Icon} className="size-5" />
+              Retake
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="flex-1 h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <HugeiconsIcon icon={Loading03Icon} className="size-5 animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={Tick02Icon} className="size-5 stroke-[2.5]" />
+              )}
+              {isLoading ? "Process..." : "Confirm"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
