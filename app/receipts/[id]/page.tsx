@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import { use } from "react";
 import { cn } from "@/lib/utils";
+import {
+  useReceipt,
+  useUpdateReceipt,
+  useDeleteReceipt,
+  useReanalyzeReceipt,
+  type ReceiptDetail,
+} from "@/lib/hooks/use-receipts";
+import { useReceiptUpdates } from "@/lib/hooks/use-receipt-updates";
 
 // Parse bounding box from JSON string to array
 function parseBoundingBox(boxStr: string | null): [number, number, number, number] | null {
@@ -43,37 +51,6 @@ function parseBoundingBox(boxStr: string | null): [number, number, number, numbe
     // Invalid JSON
   }
   return null;
-}
-
-interface ReceiptItem {
-  id: string;
-  name: string;
-  inferredName: string | null;
-  productType: string | null;
-  boundingBox: string | null;
-  quantity: number;
-  unitPrice: number | null;
-  totalPrice: number;
-  discount: number | null;
-}
-
-interface ReceiptDetail {
-  id: string;
-  storeName: string | null;
-  storeAddress: string | null;
-  date: Date | null;
-  currency: string | null;
-  subtotal: number | null;
-  tax: number | null;
-  total: number;
-  imagePath: string;
-  receiptBoundingBox: string | null; // JSON: [ymin, xmin, ymax, xmax] in 0-1000 scale
-  categoryId: string | null;
-  categoryName: string | null;
-  categoryColor: string | null;
-  notes: string | null;
-  status?: "pending" | "processing" | "completed" | "failed";
-  items: ReceiptItem[];
 }
 
 function formatCurrency(amount: number, currency: string = "PLN"): string {
@@ -100,87 +77,55 @@ export default function ReceiptDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // TanStack Query hooks - auto-polls while processing
+  const { data: receipt, isLoading: loading, error: queryError } = useReceipt(id);
+  const updateMutation = useUpdateReceipt();
+  const deleteMutation = useDeleteReceipt();
+  const reanalyzeMutation = useReanalyzeReceipt();
+
+  // Enable SSE updates when receipt is processing (incremental enhancement)
+  const isProcessing = receipt?.status === "pending" || receipt?.status === "processing";
+  useReceiptUpdates(isProcessing ? [id] : undefined, isProcessing);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch(`/api/receipts/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Receipt not found");
-        return res.json();
-      })
-      .then((data) => {
-        setReceipt(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [id]);
+  const error = queryError?.message ?? null;
 
   const handleSave = async (data: any) => {
-    setIsSaving(true);
     try {
-      const res = await fetch(`/api/receipts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to save");
-
-      const updated = await res.json();
-      setReceipt(updated);
+      await updateMutation.mutateAsync({ id, data });
       setIsEditing(false);
     } catch (err) {
       alert("Failed to save changes");
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/receipts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      await deleteMutation.mutateAsync(id);
       router.push("/receipts");
     } catch (err) {
       alert("Failed to delete receipt");
-      setIsDeleting(false);
     }
   };
 
   const handleReanalyze = async () => {
-    setIsReanalyzing(true);
     try {
-      const res = await fetch(`/api/receipts/${id}/reanalyze`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to re-analyze");
-      }
-      // Update local state to show processing status
-      // The workflow runs in the background - user can navigate away
-      if (receipt) {
-        setReceipt({ ...receipt, status: "processing" });
-      }
+      await reanalyzeMutation.mutateAsync(id);
+      // Status updates automatically via query invalidation + smart polling
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to re-analyze receipt");
-    } finally {
-      setIsReanalyzing(false);
     }
   };
+
+  // Derived state from mutations
+  const isSaving = updateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
+  const isReanalyzing = reanalyzeMutation.isPending;
 
   if (loading) {
     return (
@@ -449,16 +394,6 @@ export default function ReceiptDetailPage({
 
             const cropStyles = getCropStyles();
 
-            // Debug logging
-            if (receiptBox && cropStyles) {
-              console.log("=== Receipt Crop Debug ===");
-              console.log("Receipt bounding box [ymin, xmin, ymax, xmax]:", receiptBox);
-              console.log("Image natural aspect ratio:", imageAspectRatio);
-              console.log("Uniform scale:", cropStyles.scale);
-              console.log("Translate:", { x: cropStyles.translateX, y: cropStyles.translateY });
-              console.log("Container aspect ratio:", cropStyles.containerAspectRatio);
-            }
-
             return (
               <div className="lg:w-[450px] shrink-0">
                 <div className="lg:sticky lg:top-28">
@@ -482,11 +417,6 @@ export default function ReceiptDetailPage({
                         onLoad={(e) => {
                           const img = e.target as HTMLImageElement;
                           if (img.naturalWidth && img.naturalHeight) {
-                            console.log("Image loaded:", {
-                              naturalWidth: img.naturalWidth,
-                              naturalHeight: img.naturalHeight,
-                              aspectRatio: img.naturalWidth / img.naturalHeight,
-                            });
                             setImageAspectRatio(img.naturalWidth / img.naturalHeight);
                           }
                         }}

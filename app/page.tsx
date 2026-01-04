@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ReceiptCapture } from "@/components/receipt-capture";
 import { ReceiptList } from "@/components/receipt-list";
 import { BulkUpload } from "@/components/bulk-upload";
@@ -14,7 +15,7 @@ import {
   Upload01Icon,
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { receiptKeys } from "@/lib/hooks/use-receipts";
 
 interface WeeklyStats {
   totalSpent: number;
@@ -31,9 +32,9 @@ function formatCurrency(amount: number): string {
 }
 
 export default function Home() {
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<"capture" | "bulk">("capture");
   const [isLoading, setIsLoading] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({
     totalSpent: 0,
     receiptCount: 0,
@@ -57,7 +58,7 @@ export default function Home() {
       .catch(() => {
         // Silently fail, keep defaults
       });
-  }, [refreshTrigger]);
+  }, []);
 
   // Handle single capture - queue for async processing
   const handleScan = async (file: File) => {
@@ -73,8 +74,9 @@ export default function Home() {
 
       if (!res.ok) throw new Error("Upload failed");
 
-      // Immediately refresh the list to show the pending receipt
-      setRefreshTrigger((prev) => prev + 1);
+      // Invalidate queries to show the new pending receipt
+      // TanStack Query will auto-poll while it's processing
+      queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
     } catch (err) {
       alert("Failed to upload receipt. Please try again.");
     } finally {
@@ -83,7 +85,7 @@ export default function Home() {
   };
 
   const handleBulkComplete = () => {
-    setRefreshTrigger((prev) => prev + 1);
+    queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
     setMode("capture");
   };
 
@@ -176,7 +178,7 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            <ReceiptList limit={5} refreshTrigger={refreshTrigger} />
+            <ReceiptList limit={5} />
           </div>
 
           {/* <div className="glass-card p-6 relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all">

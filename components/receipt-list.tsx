@@ -1,52 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { ReceiptCard } from "./receipt-card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Invoice01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-
-interface Receipt {
-  id: string;
-  storeName: string | null;
-  date: Date | null;
-  total: number;
-  currency: string | null;
-  categoryName?: string | null;
-  categoryColor?: string | null;
-  status: string;
-  errorMessage?: string | null;
-}
+import { useReceipts } from "@/lib/hooks/use-receipts";
+import { useReceiptUpdates } from "@/lib/hooks/use-receipt-updates";
 
 interface ReceiptListProps {
   categoryId?: string;
   limit?: number;
-  refreshTrigger?: number;
 }
 
-export function ReceiptList({ categoryId, limit = 50, refreshTrigger }: ReceiptListProps) {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ReceiptList({ categoryId, limit = 50 }: ReceiptListProps) {
+  // TanStack Query - auto-polls while any receipts are processing
+  const { data: receipts = [], isLoading: loading, error: queryError } = useReceipts({
+    categoryId,
+    limit,
+  });
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (categoryId) params.set("categoryId", categoryId);
-    if (limit) params.set("limit", limit.toString());
+  // Enable SSE for processing receipts (incremental enhancement)
+  const processingIds = receipts
+    .filter((r) => r.status === "pending" || r.status === "processing")
+    .map((r) => r.id);
+  useReceiptUpdates(processingIds.length > 0 ? processingIds : undefined, processingIds.length > 0);
 
-    fetch(`/api/receipts?${params}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((data) => {
-        setReceipts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [categoryId, limit, refreshTrigger]);
+  const error = queryError?.message ?? null;
 
   if (loading) {
     return (
