@@ -2,89 +2,89 @@
 
 import { useState, useEffect } from "react";
 import { ReceiptCapture } from "@/components/receipt-capture";
-import { ReceiptForm } from "@/components/receipt-form";
 import { ReceiptList } from "@/components/receipt-list";
+import { BulkUpload } from "@/components/bulk-upload";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Invoice01Icon,
   Invoice02Icon,
   UserCircleIcon,
-  Search01Icon,
   Note01Icon,
   ArrowRight01Icon,
+  ChartLineData02Icon,
+  Upload01Icon,
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-interface Receipt {
-  id: string;
-  storeName: string;
-  date: string;
-  total: number;
-  currency: string;
-  categoryName: string;
-  categoryColor: string;
+interface WeeklyStats {
+  totalSpent: number;
+  receiptCount: number;
+  topProductType: string | null;
+  topProductPercentage: number;
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("pl-PL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 export default function Home() {
-  const [step, setStep] = useState<"capture" | "review">("capture");
-  const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [scannedData, setScannedData] = useState<any>(null);
+  const [mode, setMode] = useState<"capture" | "bulk">("capture");
   const [isLoading, setIsLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({
+    totalSpent: 0,
+    receiptCount: 0,
+    topProductType: null,
+    topProductPercentage: 0,
+  });
 
-  const handleCapture = (file: File) => {
-    setCapturedFile(file);
-  };
+  // Fetch weekly stats
+  useEffect(() => {
+    fetch("/api/reports?period=week")
+      .then((res) => res.json())
+      .then((data) => {
+        const topProduct = data.byProductType?.[0];
+        setWeeklyStats({
+          totalSpent: data.summary?.totalSpent || 0,
+          receiptCount: data.summary?.receiptCount || 0,
+          topProductType: topProduct?.productType || null,
+          topProductPercentage: topProduct?.percentage || 0,
+        });
+      })
+      .catch(() => {
+        // Silently fail, keep defaults
+      });
+  }, [refreshTrigger]);
 
-  const handleScan = async () => {
-    if (!capturedFile) return;
-
+  // Handle single capture - queue for async processing
+  const handleScan = async (file: File) => {
     setIsLoading(true);
     const formData = new FormData();
-    formData.append("image", capturedFile);
+    formData.append("files", file);
 
     try {
-      const res = await fetch("/api/receipts/scan", {
+      const res = await fetch("/api/receipts/queue", {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Scan failed");
+      if (!res.ok) throw new Error("Upload failed");
 
-      const data = await res.json();
-      setScannedData(data);
-      setStep("review");
+      // Immediately refresh the list to show the pending receipt
+      setRefreshTrigger((prev) => prev + 1);
     } catch (err) {
-      alert("Failed to scan receipt. Please try again.");
+      alert("Failed to upload receipt. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (data: any) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          imagePath: scannedData.imagePath,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to save");
-
-      setStep("capture");
-      setCapturedFile(null);
-      setScannedData(null);
-      setRefreshTrigger((prev) => prev + 1);
-    } catch (err) {
-      alert("Failed to save receipt.");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleBulkComplete = () => {
+    setRefreshTrigger((prev) => prev + 1);
+    setMode("capture");
   };
 
   return (
@@ -96,7 +96,7 @@ export default function Home() {
             Dashboard
           </h1>
           <p className="text-muted-foreground font-medium">
-            Welcome back, <span className="text-foreground">Mav</span>. You scanned <span className="text-primary">12</span> receipts this week.
+            Welcome back, <span className="text-foreground">Mav</span>. You scanned <span className="text-primary">{weeklyStats.receiptCount}</span> receipt{weeklyStats.receiptCount !== 1 ? "s" : ""} this week.
           </p>
         </div>
         <div className="size-14 rounded-2xl bg-background/50 glass flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
@@ -108,66 +108,54 @@ export default function Home() {
         {/* Left Col: Main Action */}
         <div className="lg:col-span-7 space-y-10">
           <section className="space-y-6">
-            <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
-              <HugeiconsIcon icon={Invoice02Icon} className="size-4" />
-              Capture New Receipt
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
+                <HugeiconsIcon icon={Invoice02Icon} className="size-4" />
+                {mode === "capture" ? "Capture New Receipt" : "Bulk Upload"}
+              </div>
+              <button
+                onClick={() => setMode(mode === "capture" ? "bulk" : "capture")}
+                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+              >
+                <HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
+                {mode === "capture" ? "Bulk Upload" : "Single Capture"}
+              </button>
             </div>
 
-            <div className={cn(
-              "transition-all duration-500",
-              step === "review" ? "opacity-0 scale-95 pointer-events-none hidden" : "opacity-100 scale-100"
-            )}>
+            {mode === "capture" ? (
               <ReceiptCapture
-                onCapture={handleCapture}
+                onCapture={() => {}}
                 onScan={handleScan}
                 isLoading={isLoading}
               />
-            </div>
-
-            <div className={cn(
-              "transition-all duration-500",
-              step === "capture" ? "opacity-0 scale-95 pointer-events-none hidden" : "opacity-100 scale-100"
-            )}>
-              <div className="glass-card p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-black tracking-tight">Review Details</h2>
-                  <button
-                    onClick={() => setStep("capture")}
-                    className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {scannedData && (
-                  <ReceiptForm
-                    initialData={scannedData}
-                    onSubmit={handleSubmit}
-                    onCancel={() => setStep("capture")}
-                    isLoading={isLoading}
-                  />
-                )}
-              </div>
-            </div>
+            ) : (
+              <BulkUpload
+                onComplete={handleBulkComplete}
+                onClose={() => setMode("capture")}
+              />
+            )}
           </section>
 
           {/* Quick Stats Grid */}
           <section className="grid grid-cols-2 gap-4">
-            <div className="glass-card p-6">
+            <Link href="/reports" className="glass-card p-6 hover:border-primary/30 transition-all group">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Weekly Spend</p>
-              <p className="text-2xl font-black">2,450.00 <span className="text-xs text-muted-foreground">PLN</span></p>
+              <p className="text-2xl font-black">{formatCurrency(weeklyStats.totalSpent)} <span className="text-xs text-muted-foreground">PLN</span></p>
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary">
+                <HugeiconsIcon icon={ChartLineData02Icon} className="size-3 group-hover:translate-x-0.5 transition-transform" />
+                View full reports
+              </div>
+            </Link>
+            <Link href="/reports" className="glass-card p-6 hover:border-primary/30 transition-all group">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Top Product Type</p>
+              <p className="text-2xl font-black capitalize">{weeklyStats.topProductType || "—"}</p>
               <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary">
                 <div className="size-1.5 rounded-full bg-primary animate-pulse" />
-                12% more than last week
+                {weeklyStats.topProductPercentage > 0
+                  ? `${weeklyStats.topProductPercentage.toFixed(1)}% of total spend`
+                  : "No data yet"}
               </div>
-            </div>
-            <div className="glass-card p-6">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Top Category</p>
-              <p className="text-2xl font-black">Groceries</p>
-              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary">
-                <div className="size-1.5 rounded-full bg-primary animate-pulse" />
-                45.3% of total spend
-              </div>
-            </div>
+            </Link>
           </section>
         </div>
 
@@ -191,7 +179,7 @@ export default function Home() {
             <ReceiptList limit={5} refreshTrigger={refreshTrigger} />
           </div>
 
-          <div className="glass-card p-6 relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all">
+          {/* <div className="glass-card p-6 relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all">
             <div className="absolute -right-4 -top-4 size-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all" />
             <div className="flex items-center gap-4">
               <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
@@ -202,7 +190,7 @@ export default function Home() {
                 <p className="text-xs text-muted-foreground">Find any transaction by item or store.</p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

@@ -32,9 +32,12 @@ await client.execute(`
     tax REAL,
     total REAL NOT NULL,
     image_path TEXT NOT NULL,
+    receipt_bounding_box TEXT,
     raw_text TEXT,
     category_id TEXT REFERENCES categories(id),
     notes TEXT,
+    status TEXT NOT NULL DEFAULT 'completed',
+    error_message TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )
@@ -74,6 +77,30 @@ try {
 try {
   await client.execute("ALTER TABLE receipt_items ADD COLUMN bounding_box TEXT");
   console.log("Added bounding_box column to receipt_items");
+} catch {
+  // Column already exists
+}
+
+// Migration: add status column to receipts for async processing
+try {
+  await client.execute("ALTER TABLE receipts ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'");
+  console.log("Added status column to receipts");
+} catch {
+  // Column already exists
+}
+
+// Migration: add error_message column to receipts for failed processing
+try {
+  await client.execute("ALTER TABLE receipts ADD COLUMN error_message TEXT");
+  console.log("Added error_message column to receipts");
+} catch {
+  // Column already exists
+}
+
+// Migration: add receipt_bounding_box column to receipts
+try {
+  await client.execute("ALTER TABLE receipts ADD COLUMN receipt_bounding_box TEXT");
+  console.log("Added receipt_bounding_box column to receipts");
 } catch {
   // Column already exists
 }

@@ -20,9 +20,13 @@ export const receipts = sqliteTable("receipts", {
   tax: real("tax"),
   total: real("total").notNull(),
   imagePath: text("image_path").notNull(),
+  receiptBoundingBox: text("receipt_bounding_box"), // JSON: [ymin, xmin, ymax, xmax] in 0-1000 scale
   rawText: text("raw_text"), // OCR raw output for debugging
   categoryId: text("category_id").references(() => categories.id),
   notes: text("notes"),
+  // Processing status for async workflow
+  status: text("status").default("completed").notNull(), // pending|processing|completed|failed
+  errorMessage: text("error_message"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

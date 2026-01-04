@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
 import { NavBar } from "@/components/nav-bar";
+import { DesktopNav } from "@/components/desktop-nav";
 import "./globals.css";
 
 const nunitoSans = Nunito_Sans({ variable: "--font-sans", subsets: ["latin"] });
@@ -39,6 +40,7 @@ export default function RootLayout({
       >
         <div className="bg-noise" />
         <div className="relative flex flex-col min-h-screen">
+          <DesktopNav />
           <main className="flex-1 pb-24 md:pb-0">{children}</main>
           <NavBar />
         </div>

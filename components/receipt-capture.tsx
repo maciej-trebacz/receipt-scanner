@@ -14,8 +14,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ReceiptCaptureProps {
-  onCapture: (file: File) => void;
-  onScan: () => void;
+  onCapture?: (file: File) => void;
+  onScan: (file: File) => void;
   isLoading?: boolean;
 }
 
@@ -40,7 +40,7 @@ export function ReceiptCapture({
     reader.readAsDataURL(file);
 
     setSelectedFile(file);
-    onCapture(file);
+    onCapture?.(file);
   };
 
   const handleClear = () => {
@@ -52,7 +52,9 @@ export function ReceiptCapture({
 
   const handleConfirm = () => {
     if (selectedFile) {
-      onScan();
+      onScan(selectedFile);
+      // Clear the preview after upload starts
+      handleClear();
     }
   };
 
@@ -92,14 +94,14 @@ export function ReceiptCapture({
               className="w-full h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
               <HugeiconsIcon icon={Camera01Icon} className="size-6 stroke-[2.5]" />
-              Start Camera
+              Scan with Camera
             </button>
             <button
               onClick={() => galleryInputRef.current?.click()}
-              className="w-full h-14 glass text-foreground font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+              className="w-full h-14 text-foreground font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
               <HugeiconsIcon icon={Image01Icon} className="size-6" />
-              Upload Gallery
+              Select from Gallery
             </button>
           </div>
         </div>

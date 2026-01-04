@@ -13,6 +13,8 @@ interface Receipt {
   currency: string | null;
   categoryName?: string | null;
   categoryColor?: string | null;
+  status: string;
+  errorMessage?: string | null;
 }
 
 interface ReceiptListProps {
@@ -97,6 +99,8 @@ export function ReceiptList({ categoryId, limit = 50, refreshTrigger }: ReceiptL
           currency={receipt.currency}
           categoryName={receipt.categoryName}
           categoryColor={receipt.categoryColor}
+          status={receipt.status}
+          errorMessage={receipt.errorMessage}
         />
       ))}
     </div>

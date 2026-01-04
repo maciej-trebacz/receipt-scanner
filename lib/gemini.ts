@@ -24,6 +24,7 @@ export interface ExtractedReceipt {
   storeAddress: string | null;
   date: string | null; // ISO date string
   currency: string;
+  receiptBoundingBox: [number, number, number, number] | null; // [ymin, xmin, ymax, xmax] in 0-1000 scale
   items: ExtractedItem[];
   subtotal: number | null;
   tax: number | null;
@@ -38,11 +39,12 @@ Analyze this receipt image and extract the following information in JSON format:
   "storeAddress": "string or null",
   "date": "ISO date string (YYYY-MM-DD) or null",
   "currency": "3-letter currency code (default PLN)",
+  "receiptBoundingBox": [ymin, xmin, ymax, xmax] or null,
   "items": [
     {
       "name": "string (exact text from receipt)",
       "inferredName": "string (human-readable product name)",
-      "productType": "string (product category in English)",
+      "productType": "string (product category in Polish)",
       "box_2d": [ymin, xmin, ymax, xmax] or null,
       "quantity": number (default 1),
       "unitPrice": number or null,
@@ -63,11 +65,12 @@ Rules:
   - Example: "BAN ORG" → "Banany organiczne"
   - Example: "CHLEB PSZENNY" → "Chleb pszenny"
   - If the name is already clear, inferredName can be the same as name
-- "productType" should be a simple English category describing what the product is:
-  - Examples: "bread", "milk", "cheese", "vegetables", "fruit", "meat", "fish", "beverages", "snacks", "cleaning supplies", "personal care", "medicine"
+- "productType" should be a simple Polish category describing what the product is:
+  - Examples: "chleb", "mleko", "ser", "warzywa", "owoce", "mięso", "ryby", "napoje", "przekąski", "sprzęt", "leki", "inne"
   - Use lowercase, singular form
-  - Be specific but not overly detailed (e.g., "bread" not "gluten-free white bread")
+  - Be specific but not overly detailed (e.g., "chleb" not "chleb pszenny")
   - If you can't reasonably infer a product type, use null
+- "receiptBoundingBox" should be the bounding box of the the whole receipt with a small padding, in [ymin, xmin, ymax, xmax] format (0-1000 scale)
 - "box_2d" should be the bounding box of the item's text line on the receipt in [ymin, xmin, ymax, xmax] format (0-1000 scale)
   - If you can detect the location of the item text, provide the bounding box
   - If not detectable, use null
@@ -129,6 +132,10 @@ export function parseGeminiResponse(text: string): ExtractedReceipt {
       storeAddress: parsed.storeAddress ?? null,
       date: parsed.date ?? null,
       currency: parsed.currency || "PLN",
+      receiptBoundingBox:
+        Array.isArray(parsed.receiptBoundingBox) && parsed.receiptBoundingBox.length === 4
+          ? parsed.receiptBoundingBox
+          : null,
       items: Array.isArray(parsed.items)
         ? parsed.items.map((item: any) => ({
             name: item.name || "Unknown item",

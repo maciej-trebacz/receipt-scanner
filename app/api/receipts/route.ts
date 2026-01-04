@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
         categoryId: receipts.categoryId,
         categoryName: categories.name,
         categoryColor: categories.color,
+        status: receipts.status,
+        errorMessage: receipts.errorMessage,
         createdAt: receipts.createdAt,
       })
       .from(receipts)
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     const receiptId = uuid();
     const now = new Date();
 
-    // Create receipt
+    // Create receipt (manual creation = completed status)
     await db.insert(receipts).values({
       id: receiptId,
       storeName,
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest) {
       rawText,
       categoryId: categoryId || null,
       notes,
+      status: "completed",
       createdAt: now,
       updatedAt: now,
     });

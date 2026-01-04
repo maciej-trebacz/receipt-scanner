@@ -67,10 +67,12 @@ interface ReceiptDetail {
   tax: number | null;
   total: number;
   imagePath: string;
+  receiptBoundingBox: string | null; // JSON: [ymin, xmin, ymax, xmax] in 0-1000 scale
   categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
   notes: string | null;
+  status?: "pending" | "processing" | "completed" | "failed";
   items: ReceiptItem[];
 }
 
@@ -106,6 +108,7 @@ export default function ReceiptDetailPage({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -167,8 +170,11 @@ export default function ReceiptDetailPage({
         const data = await res.json();
         throw new Error(data.error || "Failed to re-analyze");
       }
-      const updated = await res.json();
-      setReceipt(updated);
+      // Update local state to show processing status
+      // The workflow runs in the background - user can navigate away
+      if (receipt) {
+        setReceipt({ ...receipt, status: "processing" });
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to re-analyze receipt");
     } finally {
@@ -253,8 +259,8 @@ export default function ReceiptDetailPage({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 glass backdrop-blur-2xl">
-        <div className="container px-6 py-5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 glass backdrop-blur-2xl md:hidden">
+        <div className="container px-6 py-5 flex items-center justify-between max-w-5xl mx-auto">
           <button
             onClick={() => router.push("/receipts")}
             className="size-10 rounded-xl bg-background/50 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-all active:scale-95"
@@ -310,46 +316,205 @@ export default function ReceiptDetailPage({
         </div>
       </header>
 
-      <main className="container px-6 py-8">
+      {/* Desktop Header */}
+      <div className="hidden md:block container px-6 pt-8 pb-4 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.push("/receipts")}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4" />
+            <span className="text-sm font-bold">Back to Receipts</span>
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleReanalyze}
+              disabled={isReanalyzing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50"
+            >
+              <HugeiconsIcon
+                icon={RefreshIcon}
+                className={cn("size-4", isReanalyzing && "animate-spin")}
+              />
+              Re-analyze
+            </button>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+            >
+              <HugeiconsIcon icon={Edit02Icon} className="size-4" />
+              Edit
+            </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                  disabled={isDeleting}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                  Delete
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="glass border-border/50 rounded-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-2xl font-black">Delete Receipt?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    This action is permanent. All associated items and data will be removed from your records.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-3">
+                  <AlertDialogCancel className="rounded-2xl h-12 font-bold">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="rounded-2xl h-12 bg-destructive text-destructive-foreground font-black uppercase tracking-widest">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+
+      <main className="container px-6 py-8 md:pt-4 max-w-5xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-10">
           {/* Left: Receipt Image */}
-          {receipt.imagePath && (
-            <div className="lg:w-[450px] shrink-0">
-              <div className="lg:sticky lg:top-28">
-                <div className="glass-card p-3 rounded-[2.5rem] shadow-2xl relative group">
-                  <div ref={imageContainerRef} className="relative overflow-hidden rounded-[2rem]">
-                    <img
-                      src={`/api/image${receipt.imagePath}`}
-                      alt="Receipt"
-                      className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).parentElement!.style.display = "none";
-                      }}
-                    />
+          {receipt.imagePath && (() => {
+            const receiptBox = parseBoundingBox(receipt.receiptBoundingBox);
 
-                    {/* Bounding box overlay with glow */}
-                    {hoveredItemId && (() => {
-                      const item = receipt.items.find(i => i.id === hoveredItemId);
-                      const box = item ? parseBoundingBox(item.boundingBox) : null;
-                      if (!box) return null;
-                      const [ymin, xmin, ymax, xmax] = box;
-                      return (
-                        <div
-                          className="absolute border-2 border-primary bg-primary/20 pointer-events-none transition-all duration-300 shadow-[0_0_20px_var(--primary)]"
-                          style={{
-                            top: `${ymin / 10}%`,
-                            left: `${xmin / 10}%`,
-                            width: `${(xmax - xmin) / 10}%`,
-                            height: `${(ymax - ymin) / 10}%`,
-                          }}
-                        />
-                      );
-                    })()}
+            // Helper to convert item box to percentage positions
+            // If receiptBox exists, transform positions to be relative to the cropped area
+            const getItemBoxStyle = (itemBox: [number, number, number, number] | null) => {
+              if (!itemBox) return null;
+              const [iymin, ixmin, iymax, ixmax] = itemBox;
+
+              if (receiptBox) {
+                // Transform coordinates to be relative to the cropped receipt area
+                const [rymin, rxmin, rymax, rxmax] = receiptBox;
+                const receiptWidth = rxmax - rxmin;
+                const receiptHeight = rymax - rymin;
+
+                // Calculate position relative to the cropped area
+                const relTop = ((iymin - rymin) / receiptHeight) * 100;
+                const relLeft = ((ixmin - rxmin) / receiptWidth) * 100;
+                const relWidth = ((ixmax - ixmin) / receiptWidth) * 100;
+                const relHeight = ((iymax - iymin) / receiptHeight) * 100;
+
+                return {
+                  top: `${relTop}%`,
+                  left: `${relLeft}%`,
+                  width: `${relWidth}%`,
+                  height: `${relHeight}%`,
+                };
+              }
+
+              // No receipt bounding box - use original coordinates (0-1000 scale)
+              return {
+                top: `${iymin / 10}%`,
+                left: `${ixmin / 10}%`,
+                width: `${(ixmax - ixmin) / 10}%`,
+                height: `${(iymax - iymin) / 10}%`,
+              };
+            };
+
+            // Calculate crop parameters
+            const getCropStyles = () => {
+              if (!receiptBox) return null;
+              const [ymin, xmin, ymax, xmax] = receiptBox;
+              const cropWidth = xmax - xmin;
+              const cropHeight = ymax - ymin;
+
+              // Use UNIFORM scaling to prevent distortion and ensure overlays align
+              // Scale based on width - the container aspect ratio will ensure height fits
+              const scale = 1000 / cropWidth;
+
+              // Translate to show the crop region
+              // In percentage of original image dimensions
+              const translateX = -xmin / 10; // Convert from 0-1000 to percentage
+              const translateY = -ymin / 10;
+
+              // Container aspect ratio needs original image aspect ratio
+              const containerAspectRatio = imageAspectRatio
+                ? (cropWidth / cropHeight) * imageAspectRatio
+                : undefined;
+
+              return {
+                scale,
+                translateX,
+                translateY,
+                containerAspectRatio,
+                cropWidth,
+                cropHeight,
+              };
+            };
+
+            const cropStyles = getCropStyles();
+
+            // Debug logging
+            if (receiptBox && cropStyles) {
+              console.log("=== Receipt Crop Debug ===");
+              console.log("Receipt bounding box [ymin, xmin, ymax, xmax]:", receiptBox);
+              console.log("Image natural aspect ratio:", imageAspectRatio);
+              console.log("Uniform scale:", cropStyles.scale);
+              console.log("Translate:", { x: cropStyles.translateX, y: cropStyles.translateY });
+              console.log("Container aspect ratio:", cropStyles.containerAspectRatio);
+            }
+
+            return (
+              <div className="lg:w-[450px] shrink-0">
+                <div className="lg:sticky lg:top-28">
+                  <div className="glass-card p-3 rounded-[2.5rem] shadow-2xl relative group">
+                    <div
+                      ref={imageContainerRef}
+                      className="relative overflow-hidden rounded-[8px]"
+                      style={cropStyles?.containerAspectRatio ? {
+                        aspectRatio: cropStyles.containerAspectRatio,
+                      } : undefined}
+                    >
+                      <img
+                        src={`/api/image${receipt.imagePath}`}
+                        alt="Receipt"
+                        className="w-full h-auto"
+                        style={cropStyles ? {
+                          // Use transform for cropping - uniform scale preserves aspect ratio
+                          transformOrigin: '0 0',
+                          transform: `scale(${cropStyles.scale}) translate(${cropStyles.translateX}%, ${cropStyles.translateY}%)`,
+                        } : undefined}
+                        onLoad={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (img.naturalWidth && img.naturalHeight) {
+                            console.log("Image loaded:", {
+                              naturalWidth: img.naturalWidth,
+                              naturalHeight: img.naturalHeight,
+                              aspectRatio: img.naturalWidth / img.naturalHeight,
+                            });
+                            setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+                          }
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).parentElement!.style.display = "none";
+                        }}
+                      />
+
+                      {/* Bounding box overlay for hovered item */}
+                      {hoveredItemId && (() => {
+                        const item = receipt.items.find(i => i.id === hoveredItemId);
+                        const itemBox = item ? parseBoundingBox(item.boundingBox) : null;
+                        const style = getItemBoxStyle(itemBox);
+                        if (!style) return null;
+
+                        return (
+                          <div
+                            className="absolute border-2 border-primary bg-primary/20 pointer-events-none transition-all duration-300"
+                            style={style}
+                          />
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Right: Receipt Data */}
           <div className="flex-1 space-y-8">
@@ -357,7 +522,7 @@ export default function ReceiptDetailPage({
             <div className="glass-card p-8">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 pb-8 border-b border-border/50">
                 <div className="flex items-start gap-5">
-                  <div className="size-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <div className="size-16 rounded-3xl bg-primary/10 text-primary items-center justify-center shrink-0 hidden md:flex">
                     <HugeiconsIcon icon={Store01Icon} className="size-8" />
                   </div>
                   <div>
@@ -378,13 +543,6 @@ export default function ReceiptDetailPage({
                     </div>
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-primary mb-1">Total Amount</p>
-                  <p className="text-4xl font-black tracking-tighter text-glow">
-                    {formatCurrency(receipt.total, receipt.currency || "PLN")}
-                  </p>
-                </div>
               </div>
 
               {/* Items List */}
@@ -398,7 +556,7 @@ export default function ReceiptDetailPage({
                         <div
                           key={item.id}
                           className={cn(
-                            "flex items-center justify-between p-4 rounded-2xl glass transition-all duration-300 border-transparent",
+                            "flex items-center justify-between p-4 rounded-2xl transition-all duration-300 border-transparent",
                             hasBox && "cursor-pointer hover:border-primary/30 hover:bg-primary/5 hover:translate-x-1",
                             hoveredItemId === item.id && "border-primary/50 bg-primary/10 translate-x-1"
                           )}
