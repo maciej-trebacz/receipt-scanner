@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, receipts, receiptItems, categories } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
 // GET /api/receipts - List all receipts
@@ -27,7 +27,11 @@ export async function GET(request: NextRequest) {
       })
       .from(receipts)
       .leftJoin(categories, eq(receipts.categoryId, categories.id))
-      .orderBy(desc(receipts.date))
+      .orderBy(
+        // Processing/pending receipts first, then by date
+        sql`CASE WHEN ${receipts.status} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
+        desc(receipts.createdAt)
+      )
       .limit(limit);
 
     if (categoryId) {
