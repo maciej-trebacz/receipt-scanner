@@ -1,15 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, receipts, receiptItems, categories } from "@/lib/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, lt, gte } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
-// GET /api/receipts - List all receipts
+// GET /api/receipts - List all receipts with pagination and date filtering
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const cursor = searchParams.get("cursor"); // ISO date string for pagination
+    const startDate = searchParams.get("startDate"); // ISO date string
+    const endDate = searchParams.get("endDate"); // ISO date string
 
+    // Build conditions array
+    const conditions = [];
+
+    if (categoryId) {
+      conditions.push(eq(receipts.categoryId, categoryId));
+    }
+
+    // Cursor-based pagination: get receipts older than cursor
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      conditions.push(lt(receipts.createdAt, cursorDate));
+    }
+
+    // Date range filtering (filter by receipt date, not createdAt)
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      conditions.push(gte(receipts.date, start));
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lt(receipts.date, end));
+    }
+
+    // Build query - fetch limit + 1 to determine hasMore
     let query = db
       .select({
         id: receipts.id,
@@ -32,15 +62,26 @@ export async function GET(request: NextRequest) {
         sql`CASE WHEN ${receipts.status} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
         desc(receipts.createdAt)
       )
-      .limit(limit);
+      .limit(limit + 1);
 
-    if (categoryId) {
-      query = query.where(eq(receipts.categoryId, categoryId)) as typeof query;
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
     }
 
     const result = await query;
 
-    return NextResponse.json(result);
+    // Determine pagination info
+    const hasMore = result.length > limit;
+    const receiptsToReturn = hasMore ? result.slice(0, limit) : result;
+    const lastReceipt = receiptsToReturn[receiptsToReturn.length - 1];
+
+    return NextResponse.json({
+      receipts: receiptsToReturn,
+      nextCursor: hasMore && lastReceipt?.createdAt
+        ? lastReceipt.createdAt.toISOString()
+        : null,
+      hasMore,
+    });
   } catch (error) {
     console.error("Error fetching receipts:", error);
     return NextResponse.json(

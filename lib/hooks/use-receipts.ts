@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Types
 export interface ReceiptListItem {
@@ -47,12 +47,27 @@ export interface ReceiptDetail {
   items: ReceiptItem[];
 }
 
+// Date range filter type
+export interface DateRange {
+  startDate: string | null; // ISO date string YYYY-MM-DD
+  endDate: string | null;
+}
+
+// Paginated response type
+export interface PaginatedReceiptsResponse {
+  receipts: ReceiptListItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 // Query keys factory
 export const receiptKeys = {
   all: ["receipts"] as const,
   lists: () => [...receiptKeys.all, "list"] as const,
   list: (filters: { categoryId?: string; limit?: number }) =>
     [...receiptKeys.lists(), filters] as const,
+  infinite: (filters: { categoryId?: string; limit?: number; dateRange?: DateRange }) =>
+    [...receiptKeys.lists(), "infinite", filters] as const,
   details: () => [...receiptKeys.all, "detail"] as const,
   detail: (id: string) => [...receiptKeys.details(), id] as const,
 };
@@ -65,6 +80,27 @@ async function fetchReceipts(params?: {
   const searchParams = new URLSearchParams();
   if (params?.categoryId) searchParams.set("categoryId", params.categoryId);
   if (params?.limit) searchParams.set("limit", params.limit.toString());
+
+  const res = await fetch(`/api/receipts?${searchParams}`);
+  if (!res.ok) throw new Error("Failed to fetch receipts");
+  const data = await res.json();
+  // Handle both old array format and new paginated format
+  return Array.isArray(data) ? data : data.receipts;
+}
+
+async function fetchReceiptsPaginated(params: {
+  categoryId?: string;
+  limit?: number;
+  cursor?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}): Promise<PaginatedReceiptsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.categoryId) searchParams.set("categoryId", params.categoryId);
+  if (params.limit) searchParams.set("limit", params.limit.toString());
+  if (params.cursor) searchParams.set("cursor", params.cursor);
+  if (params.startDate) searchParams.set("startDate", params.startDate);
+  if (params.endDate) searchParams.set("endDate", params.endDate);
 
   const res = await fetch(`/api/receipts?${searchParams}`);
   if (!res.ok) throw new Error("Failed to fetch receipts");
@@ -103,6 +139,37 @@ export function useReceipts(params?: { categoryId?: string; limit?: number }) {
     // Poll only while receipts are processing
     refetchInterval: (query) => {
       return hasProcessingReceipts(query.state.data) ? 3000 : false;
+    },
+  });
+}
+
+/**
+ * Hook for fetching receipts with infinite scroll and date filtering.
+ * Polls every 3s while any receipts are processing.
+ */
+export function useInfiniteReceipts(params?: {
+  categoryId?: string;
+  limit?: number;
+  dateRange?: DateRange;
+}) {
+  const limit = params?.limit ?? 20;
+
+  return useInfiniteQuery({
+    queryKey: receiptKeys.infinite(params ?? {}),
+    queryFn: ({ pageParam }) =>
+      fetchReceiptsPaginated({
+        categoryId: params?.categoryId,
+        limit,
+        cursor: pageParam,
+        startDate: params?.dateRange?.startDate,
+        endDate: params?.dateRange?.endDate,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    // Poll only while receipts are processing
+    refetchInterval: (query) => {
+      const allReceipts = query.state.data?.pages.flatMap((p) => p.receipts);
+      return hasProcessingReceipts(allReceipts) ? 3000 : false;
     },
   });
 }
