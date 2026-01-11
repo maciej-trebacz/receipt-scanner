@@ -1,5 +1,9 @@
-import { db, receipts, receiptItems } from "./db";
-import { sql, gte, lt, desc } from "drizzle-orm";
+import {
+  getSummary as getSummaryQuery,
+  getByProductType as getByProductTypeQuery,
+  getByStore as getByStoreQuery,
+  getByDay as getByDayQuery,
+} from "./db/queries";
 
 export type Period = "week" | "month" | "year" | "all";
 
@@ -102,122 +106,25 @@ export function getDateRange(period: Period, offset: number = 0): DateRange {
 }
 
 export async function getSummary(start: Date, end: Date): Promise<Summary> {
-  // Database stores dates in seconds, not milliseconds
-  const startSeconds = Math.floor(start.getTime() / 1000);
-  const endSeconds = Math.floor(end.getTime() / 1000);
-
-  const result = await db
-    .select({
-      totalSpent: sql<number>`COALESCE(SUM(${receipts.total}), 0)`,
-      receiptCount: sql<number>`COUNT(*)`,
-    })
-    .from(receipts)
-    .where(
-      sql`${receipts.date} >= ${startSeconds} AND ${receipts.date} < ${endSeconds}`
-    );
-
-  const itemResult = await db
-    .select({
-      itemCount: sql<number>`COUNT(*)`,
-    })
-    .from(receiptItems)
-    .innerJoin(receipts, sql`${receiptItems.receiptId} = ${receipts.id}`)
-    .where(
-      sql`${receipts.date} >= ${startSeconds} AND ${receipts.date} < ${endSeconds}`
-    );
-
-  const totalSpent = Number(result[0]?.totalSpent) || 0;
-  const receiptCount = Number(result[0]?.receiptCount) || 0;
-  const itemCount = Number(itemResult[0]?.itemCount) || 0;
-
-  return {
-    totalSpent,
-    receiptCount,
-    itemCount,
-    avgPerReceipt: receiptCount > 0 ? totalSpent / receiptCount : 0,
-  };
+  return getSummaryQuery(start, end);
 }
 
 export async function getByProductType(
   start: Date,
   end: Date
 ): Promise<ProductTypeBreakdown[]> {
-  const startSeconds = Math.floor(start.getTime() / 1000);
-  const endSeconds = Math.floor(end.getTime() / 1000);
-
-  const result = await db
-    .select({
-      productType: receiptItems.productType,
-      totalSpent: sql<number>`SUM(${receiptItems.totalPrice})`,
-      itemCount: sql<number>`COUNT(*)`,
-    })
-    .from(receiptItems)
-    .innerJoin(receipts, sql`${receiptItems.receiptId} = ${receipts.id}`)
-    .where(
-      sql`${receipts.date} >= ${startSeconds} AND ${receipts.date} < ${endSeconds}`
-    )
-    .groupBy(receiptItems.productType)
-    .orderBy(desc(sql`SUM(${receiptItems.totalPrice})`));
-
-  // Calculate total for percentages
-  const total = result.reduce((sum, row) => sum + Number(row.totalSpent), 0);
-
-  return result.map((row) => ({
-    productType: row.productType || "Other",
-    totalSpent: Number(row.totalSpent) || 0,
-    itemCount: Number(row.itemCount) || 0,
-    percentage: total > 0 ? (Number(row.totalSpent) / total) * 100 : 0,
-  }));
+  return getByProductTypeQuery(start, end);
 }
 
 export async function getByStore(
   start: Date,
   end: Date
 ): Promise<StoreBreakdown[]> {
-  const startSeconds = Math.floor(start.getTime() / 1000);
-  const endSeconds = Math.floor(end.getTime() / 1000);
-
-  const result = await db
-    .select({
-      storeName: receipts.storeName,
-      totalSpent: sql<number>`SUM(${receipts.total})`,
-      receiptCount: sql<number>`COUNT(*)`,
-    })
-    .from(receipts)
-    .where(
-      sql`${receipts.date} >= ${startSeconds} AND ${receipts.date} < ${endSeconds}`
-    )
-    .groupBy(receipts.storeName)
-    .orderBy(desc(sql`SUM(${receipts.total})`));
-
-  return result.map((row) => ({
-    storeName: row.storeName || "Unknown Store",
-    totalSpent: Number(row.totalSpent) || 0,
-    receiptCount: Number(row.receiptCount) || 0,
-  }));
+  return getByStoreQuery(start, end);
 }
 
 export async function getByDay(start: Date, end: Date): Promise<DayBreakdown[]> {
-  const startSeconds = Math.floor(start.getTime() / 1000);
-  const endSeconds = Math.floor(end.getTime() / 1000);
-
-  const result = await db
-    .select({
-      // Date is already in seconds, so use 'unixepoch' directly
-      date: sql<string>`date(${receipts.date}, 'unixepoch')`,
-      totalSpent: sql<number>`SUM(${receipts.total})`,
-    })
-    .from(receipts)
-    .where(
-      sql`${receipts.date} >= ${startSeconds} AND ${receipts.date} < ${endSeconds}`
-    )
-    .groupBy(sql`date(${receipts.date}, 'unixepoch')`)
-    .orderBy(sql`date(${receipts.date}, 'unixepoch')`);
-
-  return result.map((row) => ({
-    date: row.date,
-    totalSpent: Number(row.totalSpent) || 0,
-  }));
+  return getByDayQuery(start, end);
 }
 
 export async function getReportsData(period: Period, offset: number = 0): Promise<ReportsData> {

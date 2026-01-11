@@ -1,16 +1,20 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "./schema";
+/**
+ * Database layer exports for Supabase/PostgreSQL.
+ * This file serves as the central export point for all database utilities.
+ */
 
-const DB_PATH = process.env.DATABASE_PATH || "./data/receipts.db";
+// Re-export Supabase client utilities
+export {
+  createBrowserSupabaseClient,
+  createServerSupabaseClient,
+  getServerSupabaseClient,
+} from "./supabase";
 
-const client = createClient({
-  url: `file:${DB_PATH}`,
-});
-
-// Enable foreign key constraints
-client.execute("PRAGMA foreign_keys = ON;");
-
-export const db = drizzle(client, { schema });
-
+// Re-export schema types and tables
 export * from "./schema";
+
+// Re-export all query functions and types
+export * from "./queries";
+
+// Re-export Supabase types for convenience
+export type { SupabaseClient } from "@supabase/supabase-js";

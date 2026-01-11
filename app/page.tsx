@@ -178,7 +178,7 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            <ReceiptList limit={3} variant="compact" />
+            <ReceiptList limit={5} variant="compact" />
           </div>
 
           {/* <div className="glass-card p-6 relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all">

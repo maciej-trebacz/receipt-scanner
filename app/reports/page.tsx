@@ -116,7 +116,10 @@ export default function ReportsPage() {
         ) : data ? (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              key={`summary-${period}-${offset}`}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+            >
               <div className="glass-card p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">

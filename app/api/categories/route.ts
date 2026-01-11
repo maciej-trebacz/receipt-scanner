@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { db, categories } from "@/lib/db";
+import { getAllCategories } from "@/lib/db";
 
 // GET /api/categories - List all categories
 export async function GET() {
   try {
-    const result = await db.select().from(categories);
-    return NextResponse.json(result);
+    const categories = await getAllCategories();
+    return NextResponse.json(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(

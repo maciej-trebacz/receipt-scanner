@@ -1,10 +1,10 @@
 import { FatalError } from "workflow";
-import { db, receipts, receiptItems } from "@/lib/db";
+import {
+  getServerSupabaseClient,
+  updateReceiptStatus as dbUpdateReceiptStatus,
+  updateReceipt,
+} from "@/lib/db";
 import { extractReceiptData } from "@/lib/gemini";
-import { eq } from "drizzle-orm";
-import { readFile } from "fs/promises";
-import { join } from "path";
-import { v4 as uuid } from "uuid";
 
 type ReceiptStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -16,26 +16,38 @@ async function updateReceiptStatus(
 ) {
   "use step";
 
-  await db
-    .update(receipts)
-    .set({
-      status,
-      errorMessage: errorMessage ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(receipts.id, receiptId));
+  await dbUpdateReceiptStatus(receiptId, status, errorMessage);
 }
 
-// Step: Read image file and convert to base64
+// Step: Download image from Supabase Storage and convert to base64
 async function loadImageAsBase64(
   imagePath: string
 ): Promise<{ base64: string; mimeType: string }> {
   "use step";
 
-  // imagePath is like "/uploads/receipts/filename.jpg"
-  const fullPath = join("./data", imagePath);
-  const imageBuffer = await readFile(fullPath);
-  const base64 = imageBuffer.toString("base64");
+  // imagePath is like "receipts/uploads/filename.jpg"
+  // Format: bucket/path - we need to split it
+  const [bucket, ...pathParts] = imagePath.split("/");
+  const storagePath = pathParts.join("/");
+
+  const supabase = getServerSupabaseClient();
+
+  // Download file from Supabase Storage
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .download(storagePath);
+
+  if (error) {
+    throw new FatalError(`Failed to download image from storage: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new FatalError("No data returned from storage download");
+  }
+
+  // Convert Blob to base64
+  const arrayBuffer = await data.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
 
   const ext = imagePath.split(".").pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
@@ -75,46 +87,29 @@ async function saveExtractedData(
 ) {
   "use step";
 
-  // Update receipt with extracted data
-  await db
-    .update(receipts)
-    .set({
-      storeName: data.storeName,
-      storeAddress: data.storeAddress,
-      date: data.date ? new Date(data.date) : null,
-      currency: data.currency,
-      receiptBoundingBox: data.receiptBoundingBox
-        ? JSON.stringify(data.receiptBoundingBox)
-        : null,
-      subtotal: data.subtotal,
-      tax: data.tax,
-      total: data.total,
-      status: "completed",
-      updatedAt: new Date(),
-    })
-    .where(eq(receipts.id, receiptId));
-
-  // Delete any existing items (in case of retry)
-  await db.delete(receiptItems).where(eq(receiptItems.receiptId, receiptId));
-
-  // Insert new items
-  if (data.items.length > 0) {
-    const itemsToInsert = data.items.map((item, index) => ({
-      id: uuid(),
-      receiptId,
+  await updateReceipt(receiptId, {
+    storeName: data.storeName,
+    storeAddress: data.storeAddress,
+    date: data.date ? new Date(data.date) : null,
+    currency: data.currency,
+    receiptBoundingBox: data.receiptBoundingBox
+      ? JSON.stringify(data.receiptBoundingBox)
+      : null,
+    subtotal: data.subtotal,
+    tax: data.tax,
+    total: data.total,
+    status: "completed",
+    items: data.items.map((item) => ({
       name: item.name,
       inferredName: item.inferredName,
       productType: item.productType,
-      boundingBox: item.boundingBox ? JSON.stringify(item.boundingBox) : null,
+      boundingBox: item.boundingBox,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       totalPrice: item.totalPrice,
       discount: item.discount,
-      sortOrder: index,
-    }));
-
-    await db.insert(receiptItems).values(itemsToInsert);
-  }
+    })),
+  });
 }
 
 // Main workflow orchestrator
@@ -128,7 +123,7 @@ export async function processReceiptWorkflow(
     // Mark as processing
     await updateReceiptStatus(receiptId, "processing");
 
-    // Load image from disk
+    // Load image from Supabase Storage
     const { base64, mimeType } = await loadImageAsBase64(imagePath);
 
     // Extract data with Gemini (automatic retries on transient failures)

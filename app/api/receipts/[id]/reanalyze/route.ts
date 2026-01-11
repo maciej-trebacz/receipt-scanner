@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, receipts } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { getReceiptSimple, updateReceiptStatus } from "@/lib/db/queries";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
 
@@ -14,17 +13,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
 
     // Get the existing receipt
-    const existing = await db
-      .select()
-      .from(receipts)
-      .where(eq(receipts.id, id))
-      .limit(1);
+    const receipt = await getReceiptSimple(id);
 
-    if (existing.length === 0) {
+    if (!receipt) {
       return NextResponse.json({ error: "Receipt not found" }, { status: 404 });
     }
-
-    const receipt = existing[0];
 
     if (!receipt.imagePath) {
       return NextResponse.json(
@@ -34,14 +27,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Mark as pending immediately
-    await db
-      .update(receipts)
-      .set({
-        status: "pending",
-        errorMessage: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(receipts.id, id));
+    await updateReceiptStatus(id, "pending", null);
 
     // Start the workflow (fire-and-forget)
     await start(processReceiptWorkflow, [id, receipt.imagePath]);

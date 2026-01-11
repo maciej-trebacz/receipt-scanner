@@ -406,7 +406,7 @@ export default function ReceiptDetailPage({
                       } : undefined}
                     >
                       <img
-                        src={`/api/image${receipt.imagePath}`}
+                        src={`/api/image/${receipt.imagePath}`}
                         alt="Receipt"
                         className="w-full h-auto"
                         style={cropStyles ? {

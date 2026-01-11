@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, receipts } from "@/lib/db";
-import { inArray } from "drizzle-orm";
+import { getReceiptsStatus } from "@/lib/db/queries";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,17 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ids array required" }, { status: 400 });
     }
 
-    const results = await db
-      .select({
-        id: receipts.id,
-        status: receipts.status,
-        errorMessage: receipts.errorMessage,
-        storeName: receipts.storeName,
-        total: receipts.total,
-        imagePath: receipts.imagePath,
-      })
-      .from(receipts)
-      .where(inArray(receipts.id, ids));
+    const results = await getReceiptsStatus(ids);
 
     return NextResponse.json(results);
   } catch (error) {

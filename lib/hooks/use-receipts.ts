@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createBrowserSupabaseClient } from "@/lib/db/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // Types
 export interface ReceiptListItem {
@@ -113,39 +116,132 @@ async function fetchReceipt(id: string): Promise<ReceiptDetail> {
   return res.json();
 }
 
-// Check if any receipts are still processing
-function hasProcessingReceipts(receipts: ReceiptListItem[] | undefined): boolean {
-  if (!receipts) return false;
-  return receipts.some(
-    (r) => r.status === "pending" || r.status === "processing"
-  );
-}
+// Supabase Realtime subscription hook
 
-function isProcessing(receipt: ReceiptDetail | undefined): boolean {
-  if (!receipt) return false;
-  return receipt.status === "pending" || receipt.status === "processing";
+/**
+ * Hook that subscribes to Supabase Realtime for receipt changes.
+ * Automatically invalidates React Query cache when receipts are inserted, updated, or deleted.
+ *
+ * @param options.receiptId - Optional specific receipt ID to watch
+ * @param options.enabled - Whether to enable the subscription (default: true)
+ */
+export function useReceiptRealtimeSubscription(options?: {
+  receiptId?: string;
+  enabled?: boolean;
+}) {
+  const { receiptId, enabled = true } = options ?? {};
+  const queryClient = useQueryClient();
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const supabaseRef = useRef<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Create Supabase client if not already created
+    if (!supabaseRef.current) {
+      supabaseRef.current = createBrowserSupabaseClient();
+    }
+
+    const supabase = supabaseRef.current;
+    const channelName = receiptId ? `receipt-${receiptId}` : "receipts-all";
+
+    // Build the channel subscription
+    let channel = supabase.channel(channelName);
+
+    if (receiptId) {
+      // Subscribe to changes for a specific receipt
+      channel = channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "receipts",
+          filter: `id=eq.${receiptId}`,
+        },
+        (payload) => {
+          console.log("[Realtime] Receipt change:", payload.eventType, payload.new);
+
+          // Invalidate the specific receipt detail query
+          queryClient.invalidateQueries({
+            queryKey: receiptKeys.detail(receiptId),
+          });
+
+          // Also invalidate lists in case status changed
+          queryClient.invalidateQueries({
+            queryKey: receiptKeys.lists(),
+          });
+        }
+      );
+    } else {
+      // Subscribe to all receipt changes
+      channel = channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "receipts",
+        },
+        (payload) => {
+          console.log("[Realtime] Receipt change:", payload.eventType, payload.new);
+
+          const newData = payload.new as { id?: string } | undefined;
+
+          // Invalidate all receipt lists
+          queryClient.invalidateQueries({
+            queryKey: receiptKeys.lists(),
+          });
+
+          // If we have the receipt ID, also invalidate its detail query
+          if (newData?.id) {
+            queryClient.invalidateQueries({
+              queryKey: receiptKeys.detail(newData.id),
+            });
+          }
+        }
+      );
+    }
+
+    // Subscribe to the channel
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log(`[Realtime] Subscribed to ${channelName}`);
+      } else if (status === "CHANNEL_ERROR") {
+        console.error(`[Realtime] Channel error for ${channelName}`);
+      }
+    });
+
+    channelRef.current = channel;
+
+    // Cleanup on unmount
+    return () => {
+      if (channelRef.current) {
+        console.log(`[Realtime] Unsubscribing from ${channelName}`);
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [enabled, receiptId, queryClient]);
 }
 
 // Hooks
 
 /**
- * Hook for fetching receipt list with smart polling
- * Polls every 3s while any receipts are processing, stops when done
+ * Hook for fetching receipt list with Supabase Realtime updates.
+ * Subscribes to real-time changes instead of polling.
  */
 export function useReceipts(params?: { categoryId?: string; limit?: number }) {
+  // Subscribe to realtime updates for all receipts
+  useReceiptRealtimeSubscription();
+
   return useQuery({
     queryKey: receiptKeys.list(params ?? {}),
     queryFn: () => fetchReceipts(params),
-    // Poll only while receipts are processing
-    refetchInterval: (query) => {
-      return hasProcessingReceipts(query.state.data) ? 3000 : false;
-    },
   });
 }
 
 /**
  * Hook for fetching receipts with infinite scroll and date filtering.
- * Polls every 3s while any receipts are processing.
+ * Subscribes to Supabase Realtime for instant updates.
  */
 export function useInfiniteReceipts(params?: {
   categoryId?: string;
@@ -153,6 +249,9 @@ export function useInfiniteReceipts(params?: {
   dateRange?: DateRange;
 }) {
   const limit = params?.limit ?? 20;
+
+  // Subscribe to realtime updates for all receipts
+  useReceiptRealtimeSubscription();
 
   return useInfiniteQuery({
     queryKey: receiptKeys.infinite(params ?? {}),
@@ -166,26 +265,20 @@ export function useInfiniteReceipts(params?: {
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    // Poll only while receipts are processing
-    refetchInterval: (query) => {
-      const allReceipts = query.state.data?.pages.flatMap((p) => p.receipts);
-      return hasProcessingReceipts(allReceipts) ? 3000 : false;
-    },
   });
 }
 
 /**
- * Hook for fetching single receipt with smart polling
- * Polls every 2s while processing, stops when completed/failed
+ * Hook for fetching single receipt with Supabase Realtime updates.
+ * Subscribes to real-time changes for the specific receipt.
  */
 export function useReceipt(id: string) {
+  // Subscribe to realtime updates for this specific receipt
+  useReceiptRealtimeSubscription({ receiptId: id });
+
   return useQuery({
     queryKey: receiptKeys.detail(id),
     queryFn: () => fetchReceipt(id),
-    // Poll while receipt is processing
-    refetchInterval: (query) => {
-      return isProcessing(query.state.data) ? 2000 : false;
-    },
   });
 }
 
@@ -261,7 +354,7 @@ export function useReanalyzeReceipt() {
           return { ...old, status: "processing" as const };
         }
       );
-      // Invalidate to trigger refetch (and start polling)
+      // Invalidate to trigger refetch (realtime will handle further updates)
       queryClient.invalidateQueries({ queryKey: receiptKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
     },

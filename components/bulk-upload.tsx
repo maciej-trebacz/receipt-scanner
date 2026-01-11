@@ -101,30 +101,43 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
   };
 
   const pollStatus = useCallback(
-    (ids: string[]) => {
-      const eventSource = new EventSource(
-        `/api/receipts/stream?ids=${ids.join(",")}`
-      );
+    async (ids: string[]) => {
+      const poll = async () => {
+        try {
+          const res = await fetch("/api/receipts/status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids }),
+          });
 
-      eventSource.onmessage = (event) => {
-        if (event.data === "[DONE]") {
-          eventSource.close();
+          if (!res.ok) return;
+
+          const updates = await res.json();
+
+          setQueued((prev) =>
+            prev.map((r) => {
+              const update = updates.find((u: any) => u.id === r.id);
+              return update ? { ...r, ...update } : r;
+            })
+          );
+
+          const allDone = updates.every(
+            (u: any) => u.status === "completed" || u.status === "failed"
+          );
+
+          if (allDone) {
+            setIsUploading(false);
+            onComplete?.();
+          } else {
+            setTimeout(poll, 1500);
+          }
+        } catch {
           setIsUploading(false);
           onComplete?.();
-          return;
         }
-
-        const update = JSON.parse(event.data);
-        setQueued((prev) =>
-          prev.map((r) => (r.id === update.id ? { ...r, ...update } : r))
-        );
       };
 
-      eventSource.onerror = () => {
-        eventSource.close();
-        setIsUploading(false);
-        onComplete?.();
-      };
+      poll();
     },
     [onComplete]
   );
@@ -186,7 +199,7 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
             >
               {receipt.imagePath && (
                 <img
-                  src={`/api/image${receipt.imagePath}`}
+                  src={`/api/image/${receipt.imagePath}`}
                   alt=""
                   className="size-12 object-cover rounded-lg"
                 />

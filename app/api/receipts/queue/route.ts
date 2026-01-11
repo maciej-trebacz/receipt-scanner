@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
-import { db, receipts } from "@/lib/db";
+import { getServerSupabaseClient, createReceipt } from "@/lib/db";
 import { v4 as uuid } from "uuid";
-import { mkdir, writeFile } from "fs/promises";
-import { join } from "path";
 
-const UPLOAD_DIR = "./data/uploads/receipts";
+// Storage bucket name for receipt images
+const STORAGE_BUCKET = "receipts";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
+    const supabase = getServerSupabaseClient();
 
     const queuedReceipts: Array<{
       id: string;
@@ -42,32 +41,43 @@ export async function POST(request: NextRequest) {
       // Generate unique filename
       const ext = file.name.split(".").pop() || "jpg";
       const filename = `${uuid()}-${Date.now()}.${ext}`;
-      const filepath = join(UPLOAD_DIR, filename);
+      const storagePath = `uploads/${filename}`;
 
-      // Save file
+      // Upload file to Supabase Storage
       const bytes = await file.arrayBuffer();
-      await writeFile(filepath, Buffer.from(bytes));
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(storagePath, Buffer.from(bytes), {
+          contentType: file.type,
+          upsert: false,
+        });
 
-      const relativePath = `/uploads/receipts/${filename}`;
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        return NextResponse.json(
+          { error: `Failed to upload file: ${file.name}` },
+          { status: 500 }
+        );
+      }
+
+      // Store the path in format: bucket/path (used to retrieve from storage)
+      const imagePath = `${STORAGE_BUCKET}/${storagePath}`;
       const receiptId = uuid();
-      const now = new Date();
 
-      // Create pending receipt record
-      await db.insert(receipts).values({
+      // Create pending receipt record using centralized query function
+      await createReceipt({
         id: receiptId,
-        imagePath: relativePath,
+        imagePath: imagePath,
         total: 0, // Placeholder, will be updated by workflow
         status: "pending",
-        createdAt: now,
-        updatedAt: now,
       });
 
       // Start workflow (fire-and-forget)
-      await start(processReceiptWorkflow, [receiptId, relativePath]);
+      await start(processReceiptWorkflow, [receiptId, imagePath]);
 
       queuedReceipts.push({
         id: receiptId,
-        imagePath: relativePath,
+        imagePath: imagePath,
         filename,
       });
     }
