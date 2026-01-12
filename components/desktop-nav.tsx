@@ -15,7 +15,7 @@ import {
 import { CreditBalance } from "./credit-balance";
 
 const navItems = [
-  { href: "/", icon: Home01Icon, label: "Dashboard" },
+  { href: "/dashboard", icon: Home01Icon, label: "Dashboard" },
   { href: "/receipts", icon: Invoice01Icon, label: "Receipts" },
   { href: "/reports", icon: Analytics01Icon, label: "Reports" },
 ];
@@ -73,7 +73,7 @@ export function DesktopNav() {
           <div className="flex items-center gap-4">
             <SignedIn>
               <Link
-                href="/"
+                href="/dashboard"
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all duration-300 group"
               >
                 <HugeiconsIcon

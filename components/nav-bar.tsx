@@ -15,7 +15,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 const navItems = [
-  { href: "/", icon: Home01Icon, label: "Home" },
+  { href: "/dashboard", icon: Home01Icon, label: "Home" },
   { href: "/receipts", icon: Invoice01Icon, label: "Receipts" },
   { href: "/reports", icon: Analytics01Icon, label: "Reports" },
   { href: "/profile", icon: UserCircleIcon, label: "Profile" },
@@ -64,7 +64,7 @@ export function NavBar() {
 
         {/* Central Scan FAB with credit badge */}
         <Link
-          href="/"
+          href="/dashboard"
           className="relative -mt-12 flex items-center justify-center size-16 bg-primary rounded-2xl shadow-xl shadow-primary/40 border-4 border-background transition-transform duration-300 hover:scale-110 active:scale-95 group"
         >
           <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />

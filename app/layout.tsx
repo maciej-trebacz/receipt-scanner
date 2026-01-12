@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { NavBar } from "@/components/nav-bar";
@@ -40,6 +41,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const { userId } = await auth();
 
   return (
     <ClerkProvider>
@@ -52,8 +54,8 @@ export default async function RootLayout({
               <div className="bg-noise" />
               <div className="relative flex flex-col min-h-screen">
                 <DesktopNav />
-                <main className="flex-1 pb-24 md:pb-0">{children}</main>
-                <NavBar />
+                <main className={`flex-1 ${userId ? "pb-24 md:pb-0" : ""}`}>{children}</main>
+                {userId && <NavBar />}
               </div>
               <Toaster />
             </Providers>
