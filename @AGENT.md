@@ -1,158 +1,172 @@
 # Agent Build Instructions
 
+## Project: Paragon (Receipt Scanner)
+
+A receipt scanning and expense tracking app built with Next.js 16, React 19, and Bun.
+
 ## Project Setup
+
 ```bash
-# Install dependencies (example for Node.js project)
-npm install
+# Install dependencies (Bun, not npm)
+bun install
 
-# Or for Python project
-pip install -r requirements.txt
+# Copy environment variables
+cp .env.local.example .env.local
+# Then fill in required values (see docs/SETUP_CHECKLIST.md)
+```
 
-# Or for Rust project  
-cargo build
+## Running Development
+
+```bash
+# Start development server (runs on http://localhost:3000)
+bun dev
+
+# Note: User typically runs dev server in separate terminal
+# Don't start it automatically
 ```
 
 ## Running Tests
+
 ```bash
-# Node.js
-npm test
+# Run all tests
+bun test
 
-# Python
-pytest
+# Run specific test file
+bun test lib/db/db.test.ts
 
-# Rust
-cargo test
+# Run E2E tests (requires dev server running)
+bunx playwright test
 ```
 
 ## Build Commands
+
 ```bash
 # Production build
-npm run build
-# or
-cargo build --release
+bun run build
+
+# Type check (no emit)
+bunx tsc --noEmit
+
+# Lint (if configured)
+bun run lint
 ```
 
-## Development Server
+## Database
+
 ```bash
-# Start development server
-npm run dev
-# or
-cargo run
+# Generate Drizzle migrations
+bunx drizzle-kit generate
+
+# Push schema changes to database
+bunx drizzle-kit push
+
+# Open Drizzle Studio (database GUI)
+bunx drizzle-kit studio
 ```
 
-## Key Learnings
-- Update this section when you learn new build optimizations
-- Document any gotchas or special setup requirements
-- Keep track of the fastest test/build cycle
+## Adding Dependencies
+
+```bash
+# Add a package (use bun, not npm)
+bun add <package>
+
+# Add dev dependency
+bun add -d <package>
+
+# Add Shadcn component
+bunx shadcn@latest add <component>
+```
+
+## Key Directories
+
+| Path | Purpose |
+|------|---------|
+| `app/` | Next.js App Router pages and API routes |
+| `components/` | React components (Shadcn + custom) |
+| `lib/` | Utilities: auth, db, credits, validations |
+| `specs/` | PRD specifications (PRD-01 through PRD-11) |
+| `docs/` | Setup checklist and original PRDs |
+| `data/` | Local SQLite database and uploads |
+
+## Environment Variables
+
+Required in `.env.local`:
+
+```env
+# Database (Supabase)
+DATABASE_URL=postgresql://...
+NEXT_PUBLIC_SUPABASE_URL=https://...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+# AI (Gemini)
+GEMINI_API_KEY=...
+
+# Auth (Clerk) - PRD-01
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
+
+# Payments (Stripe) - PRD-04
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Rate Limiting (Upstash) - PRD-06
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
+```
 
 ## Feature Development Quality Standards
 
-**CRITICAL**: All new features MUST meet the following mandatory requirements before being considered complete.
-
 ### Testing Requirements
 
-- **Minimum Coverage**: 85% code coverage ratio required for all new code
-- **Test Pass Rate**: 100% - all tests must pass, no exceptions
-- **Test Types Required**:
-  - Unit tests for all business logic and services
-  - Integration tests for API endpoints or main functionality
-  - End-to-end tests for critical user workflows
-- **Coverage Validation**: Run coverage reports before marking features complete:
-  ```bash
-  # Examples by language/framework
-  npm run test:coverage
-  pytest --cov=src tests/ --cov-report=term-missing
-  cargo tarpaulin --out Html
-  ```
-- **Test Quality**: Tests must validate behavior, not just achieve coverage metrics
-- **Test Documentation**: Complex test scenarios must include comments explaining the test strategy
+- Run `bun test` after each implementation
+- Focus on testing new functionality
+- Aim for meaningful coverage, not metrics
+- Run E2E tests for user flows: `bunx playwright test`
 
-### Git Workflow Requirements
+### Git Workflow
 
-Before moving to the next feature, ALL changes must be:
+1. Create feature branch per PRD:
+   ```bash
+   git checkout -b prd-01-authentication
+   ```
 
-1. **Committed with Clear Messages**:
+2. Commit with conventional format:
    ```bash
    git add .
-   git commit -m "feat(module): descriptive message following conventional commits"
+   git commit -m "feat(auth): add Clerk middleware and route protection"
    ```
-   - Use conventional commit format: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, etc.
-   - Include scope when applicable: `feat(api):`, `fix(ui):`, `test(auth):`
-   - Write descriptive messages that explain WHAT changed and WHY
 
-2. **Pushed to Remote Repository**:
+3. Push and create PR:
    ```bash
-   git push origin <branch-name>
+   git push -u origin prd-01-authentication
    ```
-   - Never leave completed features uncommitted
-   - Push regularly to maintain backup and enable collaboration
-   - Ensure CI/CD pipelines pass before considering feature complete
-
-3. **Branch Hygiene**:
-   - Work on feature branches, never directly on `main`
-   - Branch naming convention: `feature/<feature-name>`, `fix/<issue-name>`, `docs/<doc-update>`
-   - Create pull requests for all significant changes
-
-4. **Ralph Integration**:
-   - Update @fix_plan.md with new tasks before starting work
-   - Mark items complete in @fix_plan.md upon completion
-   - Update PROMPT.md if development patterns change
-   - Test features work within Ralph's autonomous loop
-
-### Documentation Requirements
-
-**ALL implementation documentation MUST remain synchronized with the codebase**:
-
-1. **Code Documentation**:
-   - Language-appropriate documentation (JSDoc, docstrings, etc.)
-   - Update inline comments when implementation changes
-   - Remove outdated comments immediately
-
-2. **Implementation Documentation**:
-   - Update relevant sections in this AGENT.md file
-   - Keep build and test commands current
-   - Update configuration examples when defaults change
-   - Document breaking changes prominently
-
-3. **README Updates**:
-   - Keep feature lists current
-   - Update setup instructions when dependencies change
-   - Maintain accurate command examples
-   - Update version compatibility information
-
-4. **AGENT.md Maintenance**:
-   - Add new build patterns to relevant sections
-   - Update "Key Learnings" with new insights
-   - Keep command examples accurate and tested
-   - Document new testing patterns or quality gates
 
 ### Feature Completion Checklist
 
-Before marking ANY feature as complete, verify:
+Before marking a PRD complete:
 
-- [ ] All tests pass with appropriate framework command
-- [ ] Code coverage meets 85% minimum threshold
-- [ ] Coverage report reviewed for meaningful test quality
-- [ ] Code formatted according to project standards
-- [ ] Type checking passes (if applicable)
-- [ ] All changes committed with conventional commit messages
-- [ ] All commits pushed to remote repository
-- [ ] @fix_plan.md task marked as complete
-- [ ] Implementation documentation updated
-- [ ] Inline code comments updated or added
-- [ ] AGENT.md updated (if new patterns introduced)
-- [ ] Breaking changes documented
-- [ ] Features tested within Ralph loop (if applicable)
-- [ ] CI/CD pipeline passes
+- [ ] All tests pass (`bun test`)
+- [ ] TypeScript compiles (`bunx tsc --noEmit`)
+- [ ] Build succeeds (`bun run build`)
+- [ ] Code formatted properly
+- [ ] All changes committed and pushed
+- [ ] @fix_plan.md tasks marked complete
+- [ ] Relevant specs/ PRD updated if needed
 
-### Rationale
+## Key Learnings
 
-These standards ensure:
-- **Quality**: High test coverage and pass rates prevent regressions
-- **Traceability**: Git commits and @fix_plan.md provide clear history of changes
-- **Maintainability**: Current documentation reduces onboarding time and prevents knowledge loss
-- **Collaboration**: Pushed changes enable team visibility and code review
-- **Reliability**: Consistent quality gates maintain production stability
-- **Automation**: Ralph integration ensures continuous development practices
+- **Bun, not npm**: Always use `bun` for package management
+- **App Router**: Next.js 16 uses App Router (app/ directory)
+- **Clerk**: Use `auth()` and `currentUser()` from `@clerk/nextjs/server`
+- **Drizzle**: Use `db.select().from(table)` syntax
+- **Vercel Workflow**: Async receipt processing, don't block on AI calls
+- **Week starts Monday**: All reports use Monday as week start
 
-**Enforcement**: AI agents should automatically apply these standards to all feature development tasks without requiring explicit instruction for each task.
+## Common Issues
+
+1. **Port 3000 in use**: Kill existing process or use different port
+2. **Database connection**: Check DATABASE_URL in .env.local
+3. **Clerk redirect loop**: Ensure sign-in/sign-up routes are public in middleware
+4. **Stripe webhook fails**: Use Stripe CLI for local testing: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`

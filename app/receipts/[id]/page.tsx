@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -100,7 +100,7 @@ export default function ReceiptDetailPage({
       await updateMutation.mutateAsync({ id, data });
       setIsEditing(false);
     } catch (err) {
-      alert("Failed to save changes");
+      toast.error("Failed to save changes");
     }
   };
 
@@ -109,16 +109,15 @@ export default function ReceiptDetailPage({
       await deleteMutation.mutateAsync(id);
       router.push("/receipts");
     } catch (err) {
-      alert("Failed to delete receipt");
+      toast.error("Failed to delete receipt");
     }
   };
 
   const handleReanalyze = async () => {
     try {
       await reanalyzeMutation.mutateAsync(id);
-      // Status updates automatically via query invalidation + smart polling
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to re-analyze receipt");
+      toast.error(err instanceof Error ? err.message : "Failed to re-analyze receipt");
     }
   };
 

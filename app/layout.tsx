@@ -6,6 +6,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import { NavBar } from "@/components/nav-bar";
 import { DesktopNav } from "@/components/desktop-nav";
 import { Providers } from "@/components/providers";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const nunitoSans = Nunito_Sans({ variable: "--font-sans", subsets: ["latin"] });
@@ -54,6 +55,7 @@ export default async function RootLayout({
                 <main className="flex-1 pb-24 md:pb-0">{children}</main>
                 <NavBar />
               </div>
+              <Toaster />
             </Providers>
           </NextIntlClientProvider>
         </body>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Upload01Icon,
@@ -95,7 +96,9 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
       // Start listening for status updates via SSE
       pollStatus(initial.map((r) => r.id));
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to upload receipts");
+      toast.error("Upload failed", {
+        description: error instanceof Error ? error.message : "Failed to upload receipts",
+      });
       setIsUploading(false);
     }
   };

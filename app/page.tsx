@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ReceiptCapture } from "@/components/receipt-capture";
 import { ReceiptList } from "@/components/receipt-list";
 import { BulkUpload } from "@/components/bulk-upload";
@@ -78,7 +79,9 @@ export default function Home() {
       // TanStack Query will auto-poll while it's processing
       queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
     } catch (err) {
-      alert("Failed to upload receipt. Please try again.");
+      toast.error("Upload failed", {
+        description: "Please try again",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +101,7 @@ export default function Home() {
             Dashboard
           </h1>
           <p className="text-muted-foreground font-medium">
-            Welcome back, <span className="text-foreground">Mav</span>. You scanned <span className="text-primary">{weeklyStats.receiptCount}</span> receipt{weeklyStats.receiptCount !== 1 ? "s" : ""} this week.
+            You scanned <span className="text-primary">{weeklyStats.receiptCount}</span> receipt{weeklyStats.receiptCount !== 1 ? "s" : ""} this week.
           </p>
         </div>
         <div className="size-14 rounded-2xl bg-background/50 glass flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
