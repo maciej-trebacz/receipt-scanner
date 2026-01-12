@@ -151,6 +151,27 @@ export async function updateUserCredits(id: string, credits: number): Promise<vo
   }
 }
 
+export async function updateUserPreferences(
+  id: string,
+  preferences: { preferredCurrency?: string }
+): Promise<void> {
+  const supabase = getServerSupabaseClient();
+
+  const updateData: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (preferences.preferredCurrency !== undefined) {
+    updateData.preferred_currency = preferences.preferredCurrency;
+  }
+
+  const { error } = await supabase.from("users").update(updateData).eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to update user preferences: ${error.message}`);
+  }
+}
+
 // ============================================================================
 // Credit Transaction Queries
 // ============================================================================
