@@ -6,6 +6,7 @@ import {
   receiptExists,
 } from "@/lib/db/queries";
 import { requireAuth } from "@/lib/auth";
+import { updateReceiptSchema } from "@/lib/validations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -39,6 +40,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     await requireAuth();
     const { id } = await params;
     const body = await request.json();
+
+    // Validate input
+    const result = updateReceiptSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const {
       storeName,
       storeAddress,
@@ -50,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       categoryId,
       notes,
       items,
-    } = body;
+    } = result.data;
 
     // Check if receipt exists
     const exists = await receiptExists(id);
@@ -63,7 +74,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (storeName !== undefined) updateData.storeName = storeName;
     if (storeAddress !== undefined) updateData.storeAddress = storeAddress;
-    if (date !== undefined) updateData.date = date ? new Date(date) : null;
+    if (date !== undefined) updateData.date = date ?? null;
     if (currency !== undefined) updateData.currency = currency;
     if (subtotal !== undefined) updateData.subtotal = subtotal;
     if (tax !== undefined) updateData.tax = tax;
@@ -73,7 +84,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Handle items if provided
     if (items !== undefined) {
-      updateData.items = items.map((item: any) => ({
+      updateData.items = items.map((item) => ({
         name: item.name,
         inferredName: item.inferredName || null,
         productType: item.productType || null,

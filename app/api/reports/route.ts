@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReportsData, type Period } from "@/lib/reports";
 import { requireAuth } from "@/lib/auth";
+import { reportParamsSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   try {
     await requireAuth();
     const { searchParams } = new URL(request.url);
-    const periodParam = searchParams.get("period") || "month";
-    const offsetParam = searchParams.get("offset") || "0";
+    const params = Object.fromEntries(searchParams);
 
-    // Validate period
-    const validPeriods: Period[] = ["week", "month", "year", "all"];
-    const period: Period = validPeriods.includes(periodParam as Period)
-      ? (periodParam as Period)
-      : "month";
+    // Validate params
+    const result = reportParamsSchema.safeParse(params);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid parameters", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-    // Parse offset (only allow negative or zero, no future periods)
-    const offset = Math.min(0, parseInt(offsetParam, 10) || 0);
+    const { period, offset } = result.data;
 
-    const data = await getReportsData(period, offset);
+    // Only allow negative or zero offset (no future periods)
+    const safeOffset = Math.min(0, offset);
+
+    const data = await getReportsData(period as Period, safeOffset);
 
     return NextResponse.json(data);
   } catch (error) {

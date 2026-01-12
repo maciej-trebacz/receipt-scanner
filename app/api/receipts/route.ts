@@ -2,19 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { listReceipts, createReceipt } from "@/lib/db/queries";
 import { requireAuth } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
+import { paginationSchema, receiptWithItemsSchema } from "@/lib/validations";
+import { z } from "zod";
 
 // GET /api/receipts - List all receipts with pagination and date filtering
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth();
+    const userId = await requireAuth();
     const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get("categoryId");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const cursor = searchParams.get("cursor"); // ISO date string for pagination
-    const startDate = searchParams.get("startDate"); // ISO date string
-    const endDate = searchParams.get("endDate"); // ISO date string
+    const params = Object.fromEntries(searchParams);
 
-    const result = await listReceipts({
+    // Validate pagination params
+    const result = paginationSchema.safeParse(params);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid parameters", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { limit, cursor, categoryId, startDate, endDate } = result.data;
+
+    const receipts = await listReceipts({
+      userId,
       categoryId,
       cursor,
       startDate,
@@ -22,7 +32,7 @@ export async function GET(request: NextRequest) {
       limit,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(receipts);
   } catch (error) {
     console.error("Error fetching receipts:", error);
     return NextResponse.json(
@@ -32,16 +42,32 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Extended schema for POST that requires imagePath
+const createReceiptSchema = receiptWithItemsSchema.extend({
+  imagePath: z.string().min(1),
+  rawText: z.string().optional().nullable(),
+});
+
 // POST /api/receipts - Create a new receipt
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const userId = await requireAuth();
     const body = await request.json();
+
+    // Validate input
+    const result = createReceiptSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const {
       storeName,
       storeAddress,
       date,
-      currency = "PLN",
+      currency,
       subtotal,
       tax,
       total,
@@ -49,24 +75,18 @@ export async function POST(request: NextRequest) {
       rawText,
       categoryId,
       notes,
-      items = [],
-    } = body;
-
-    if (!total || !imagePath) {
-      return NextResponse.json(
-        { error: "total and imagePath are required" },
-        { status: 400 }
-      );
-    }
+      items,
+    } = result.data;
 
     const receiptId = uuid();
 
     // Create receipt with items (manual creation = completed status)
     const created = await createReceipt({
       id: receiptId,
+      userId,
       storeName,
       storeAddress,
-      date: date ? new Date(date) : null,
+      date: date ?? null,
       currency,
       subtotal,
       tax,
@@ -76,7 +96,7 @@ export async function POST(request: NextRequest) {
       categoryId: categoryId || null,
       notes,
       status: "completed",
-      items: items.map((item: any) => ({
+      items: items?.map((item) => ({
         name: item.name,
         inferredName: item.inferredName || null,
         productType: item.productType || null,

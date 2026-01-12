@@ -5,6 +5,7 @@ import { getServerSupabaseClient, createReceipt } from "@/lib/db";
 import { v4 as uuid } from "uuid";
 import { requireAuth } from "@/lib/auth";
 import { hasCredits } from "@/lib/credits";
+import { validateFile, MAX_FILE_SIZE } from "@/lib/validations";
 
 // Storage bucket name for receipt images
 const STORAGE_BUCKET = "receipts";
@@ -31,14 +32,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate all files first
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+    // Validate all files first (type and size)
     for (const file of files) {
-      if (!validTypes.includes(file.type)) {
+      const validation = validateFile(file);
+      if (!validation.valid) {
         return NextResponse.json(
-          {
-            error: `Invalid file type: ${file.name}. Allowed: JPEG, PNG, WebP, HEIC`,
-          },
+          { error: `${file.name}: ${validation.error}` },
           { status: 400 }
         );
       }
