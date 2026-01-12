@@ -4,13 +4,14 @@
  */
 
 import { getServerSupabaseClient } from "./supabase";
-import type { Category, Receipt, ReceiptItem, NewReceipt, NewReceiptItem, NewCategory } from "./schema";
+import type { Category, Receipt, ReceiptItem, NewReceipt, NewReceiptItem, NewCategory, User, CreditTransaction } from "./schema";
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export type ReceiptStatus = "pending" | "processing" | "completed" | "failed";
+export type CreditTransactionType = "signup_bonus" | "purchase" | "usage" | "refund";
 
 export interface ReceiptWithCategory extends Receipt {
   categoryName: string | null;
@@ -46,6 +47,184 @@ export interface ReceiptStatusInfo {
   storeName: string | null;
   total: number;
   imagePath: string;
+}
+
+// ============================================================================
+// User Queries
+// ============================================================================
+
+export interface CreateUserData {
+  id: string;
+  email: string;
+  name: string | null;
+  credits?: number;
+}
+
+export async function createUser(data: CreateUserData): Promise<User> {
+  const supabase = getServerSupabaseClient();
+  const now = new Date().toISOString();
+  const credits = data.credits ?? 5;
+
+  const { data: user, error } = await supabase
+    .from("users")
+    .insert({
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      credits,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create user: ${error.message}`);
+  }
+
+  await supabase.from("credit_transactions").insert({
+    user_id: data.id,
+    amount: credits,
+    type: "signup_bonus",
+    description: "Welcome bonus credits",
+    created_at: now,
+  });
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    credits: user.credits,
+    preferredCurrency: user.preferred_currency,
+    createdAt: new Date(user.created_at),
+    updatedAt: new Date(user.updated_at),
+  };
+}
+
+export async function getUser(id: string): Promise<User | null> {
+  const supabase = getServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to fetch user: ${error.message}`);
+  }
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    email: data.email,
+    name: data.name,
+    credits: data.credits,
+    preferredCurrency: data.preferred_currency,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  const supabase = getServerSupabaseClient();
+
+  const { error } = await supabase.from("users").delete().eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to delete user: ${error.message}`);
+  }
+}
+
+export async function updateUserCredits(id: string, credits: number): Promise<void> {
+  const supabase = getServerSupabaseClient();
+
+  const { error } = await supabase
+    .from("users")
+    .update({ credits, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to update user credits: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// Credit Transaction Queries
+// ============================================================================
+
+export interface CreateTransactionData {
+  userId: string;
+  amount: number;
+  type: CreditTransactionType;
+  description?: string;
+  receiptId?: string;
+  stripePaymentId?: string;
+}
+
+export async function createCreditTransaction(data: CreateTransactionData): Promise<CreditTransaction> {
+  const supabase = getServerSupabaseClient();
+
+  const { data: transaction, error } = await supabase
+    .from("credit_transactions")
+    .insert({
+      user_id: data.userId,
+      amount: data.amount,
+      type: data.type,
+      description: data.description || null,
+      receipt_id: data.receiptId || null,
+      stripe_payment_id: data.stripePaymentId || null,
+      created_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create transaction: ${error.message}`);
+  }
+
+  return {
+    id: transaction.id,
+    userId: transaction.user_id,
+    amount: transaction.amount,
+    type: transaction.type,
+    description: transaction.description,
+    receiptId: transaction.receipt_id,
+    stripePaymentId: transaction.stripe_payment_id,
+    createdAt: new Date(transaction.created_at),
+  };
+}
+
+export async function getUserTransactions(
+  userId: string,
+  options?: { limit?: number }
+): Promise<CreditTransaction[]> {
+  const supabase = getServerSupabaseClient();
+  const limit = options?.limit ?? 50;
+
+  const { data, error } = await supabase
+    .from("credit_transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Failed to fetch transactions: ${error.message}`);
+  }
+
+  return (data || []).map((t) => ({
+    id: t.id,
+    userId: t.user_id,
+    amount: t.amount,
+    type: t.type,
+    description: t.description,
+    receiptId: t.receipt_id,
+    stripePaymentId: t.stripe_payment_id,
+    createdAt: new Date(t.created_at),
+  }));
 }
 
 // ============================================================================
@@ -129,6 +308,7 @@ export async function createCategory(category: NewCategory): Promise<Category> {
 // ============================================================================
 
 export interface ListReceiptsOptions {
+  userId?: string | null;
   categoryId?: string | null;
   cursor?: string | null; // ISO date string for pagination
   startDate?: string | null; // ISO date string
@@ -167,6 +347,10 @@ export async function listReceipts(options: ListReceiptsOptions = {}): Promise<R
     .limit(limit + 1);
 
   // Apply filters
+  if (options.userId) {
+    query = query.eq("user_id", options.userId);
+  }
+
   if (options.categoryId) {
     query = query.eq("category_id", options.categoryId);
   }
@@ -259,6 +443,7 @@ export async function getReceiptById(id: string): Promise<(ReceiptWithCategory &
 
   return {
     id: receipt.id,
+    userId: receipt.user_id,
     storeName: receipt.store_name,
     storeAddress: receipt.store_address,
     date: receipt.date ? new Date(receipt.date) : null,
@@ -335,6 +520,7 @@ export async function getReceiptSimple(id: string): Promise<Receipt | null> {
 
   return {
     id: data.id,
+    userId: data.user_id,
     storeName: data.store_name,
     storeAddress: data.store_address,
     date: data.date ? new Date(data.date) : null,
@@ -356,6 +542,7 @@ export async function getReceiptSimple(id: string): Promise<Receipt | null> {
 
 export interface CreateReceiptData {
   id: string;
+  userId?: string | null;
   storeName?: string | null;
   storeAddress?: string | null;
   date?: Date | null;
@@ -393,6 +580,7 @@ export async function createReceipt(data: CreateReceiptData): Promise<Receipt & 
     .from("receipts")
     .insert({
       id: data.id,
+      user_id: data.userId || null,
       store_name: data.storeName || null,
       store_address: data.storeAddress || null,
       date: data.date?.toISOString() || null,
@@ -460,6 +648,7 @@ export async function createReceipt(data: CreateReceiptData): Promise<Receipt & 
 
   return {
     id: receipt.id,
+    userId: receipt.user_id,
     storeName: receipt.store_name,
     storeAddress: receipt.store_address,
     date: receipt.date ? new Date(receipt.date) : null,
@@ -623,6 +812,7 @@ export async function updateReceipt(id: string, data: UpdateReceiptData): Promis
 
   return {
     id: receipt.id,
+    userId: receipt.user_id,
     storeName: receipt.store_name,
     storeAddress: receipt.store_address,
     date: receipt.date ? new Date(receipt.date) : null,

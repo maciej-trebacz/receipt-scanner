@@ -7,6 +7,29 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+// Users table
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  name: text("name"),
+  credits: integer("credits").notNull().default(5),
+  preferredCurrency: text("preferred_currency").default("PLN"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+// Credit transactions table
+export const creditTransactions = pgTable("credit_transactions", {
+  id: uuid("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  amount: integer("amount").notNull(),
+  type: text("type").notNull(),
+  description: text("description"),
+  receiptId: uuid("receipt_id"),
+  stripePaymentId: text("stripe_payment_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
 // Categories table
 export const categories = pgTable("categories", {
   id: uuid("id").primaryKey(),
@@ -19,6 +42,7 @@ export const categories = pgTable("categories", {
 // Receipts table
 export const receipts = pgTable("receipts", {
   id: uuid("id").primaryKey(),
+  userId: text("user_id"),
   storeName: text("store_name"),
   storeAddress: text("store_address"),
   date: timestamp("date", { withTimezone: true }), // purchase date
@@ -56,6 +80,10 @@ export const receiptItems = pgTable("receipt_items", {
 });
 
 // Type exports
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type NewCreditTransaction = typeof creditTransactions.$inferInsert;
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Receipt = typeof receipts.$inferSelect;

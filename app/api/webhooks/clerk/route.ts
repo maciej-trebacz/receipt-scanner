@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { getServerSupabaseClient } from "@/lib/db/supabase";
+import { createUser, deleteUser } from "@/lib/db/queries";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -35,24 +35,15 @@ export async function POST(req: Request) {
     evt = payload as WebhookEvent;
   }
 
-  const supabase = getServerSupabaseClient();
-
   if (evt.type === "user.created") {
     const { id, email_addresses, first_name, last_name } = evt.data;
     const email = email_addresses[0]?.email_address;
     const name = [first_name, last_name].filter(Boolean).join(" ") || null;
 
-    const { error } = await supabase.from("users").insert({
-      id,
-      email,
-      name,
-      credits: 5,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error("Failed to create user:", error);
+    try {
+      await createUser({ id, email: email!, name });
+    } catch (err) {
+      console.error("Failed to create user:", err);
       return new Response("Failed to create user", { status: 500 });
     }
   }
@@ -60,9 +51,10 @@ export async function POST(req: Request) {
   if (evt.type === "user.deleted") {
     const { id } = evt.data;
     if (id) {
-      const { error } = await supabase.from("users").delete().eq("id", id);
-      if (error) {
-        console.error("Failed to delete user:", error);
+      try {
+        await deleteUser(id);
+      } catch (err) {
+        console.error("Failed to delete user:", err);
         return new Response("Failed to delete user", { status: 500 });
       }
     }
