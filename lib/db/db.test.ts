@@ -27,6 +27,7 @@ beforeAll(async () => {
   await client.execute(`
     CREATE TABLE receipts (
       id TEXT PRIMARY KEY,
+      user_id TEXT,
       store_name TEXT,
       store_address TEXT,
       date INTEGER,
@@ -35,9 +36,12 @@ beforeAll(async () => {
       tax REAL,
       total REAL NOT NULL,
       image_path TEXT NOT NULL,
+      receipt_bounding_box TEXT,
       raw_text TEXT,
       category_id TEXT REFERENCES categories(id),
       notes TEXT,
+      status TEXT DEFAULT 'completed' NOT NULL,
+      error_message TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )
