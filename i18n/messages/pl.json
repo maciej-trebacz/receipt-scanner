@@ -1,0 +1,241 @@
+{
+  "common": {
+    "appName": "Paragon",
+    "loading": "Ładowanie...",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "back": "Wstecz",
+    "retry": "Ponów",
+    "close": "Zamknij"
+  },
+  "nav": {
+    "dashboard": "Pulpit",
+    "receipts": "Paragony",
+    "reports": "Raporty",
+    "profile": "Profil",
+    "signIn": "Zaloguj się",
+    "signUp": "Rozpocznij",
+    "signOut": "Wyloguj się",
+    "newScan": "Nowy skan"
+  },
+  "categories": {
+    "groceries": "Spożywcze",
+    "dining": "Restauracje",
+    "restaurants": "Restauracje",
+    "transport": "Transport",
+    "entertainment": "Rozrywka",
+    "shopping": "Zakupy",
+    "health": "Zdrowie",
+    "healthcare": "Opieka zdrowotna",
+    "utilities": "Rachunki",
+    "other": "Inne"
+  },
+  "landing": {
+    "hero": {
+      "title": "Skanuj paragony i śledź wydatki bez wysiłku",
+      "subtitle": "Zrób zdjęcie dowolnego paragonu. Nasza AI natychmiast odczyta i skategoryzuje każdą pozycję. Analizuj wydatki z pomocą przejrzystych raportów.",
+      "cta": "Zacznij za darmo",
+      "learnMore": "Dowiedz się więcej",
+      "freeCredits": "{count} darmowych skanów. Bez karty kredytowej."
+    },
+    "features": {
+      "title": "Wszystko czego potrzebujesz",
+      "subtitle": "Koniec z ręcznym przepisywaniem paragonów. Pozwól AI wykonać pracę za Ciebie.",
+      "capture": {
+        "title": "Błyskawiczne skanowanie",
+        "description": "Zrób zdjęcie lub wgraj plik. Działa z każdym formatem paragonu."
+      },
+      "ai": {
+        "title": "Ekstrakcja AI",
+        "description": "Zaawansowana AI odczytuje każdą pozycję, sumę, podatek i dane sklepu."
+      },
+      "reports": {
+        "title": "Inteligentne raporty",
+        "description": "Zobacz wydatki według kategorii, sklepu lub okresu. Odkryj trendy w mgnieniu oka."
+      },
+      "mobile": {
+        "title": "Mobile First",
+        "description": "Zaprojektowane do użycia w biegu. Skanuj paragony zaraz po zakupach."
+      }
+    },
+    "howItWorks": {
+      "title": "Jak to działa",
+      "subtitle": "Trzy proste kroki do śledzenia wydatków",
+      "step1": {
+        "title": "Zrób zdjęcie",
+        "description": "Zrób zdjęcie paragonu telefonem lub wgraj istniejący obraz."
+      },
+      "step2": {
+        "title": "AI odczytuje dane",
+        "description": "Nasza AI odczytuje paragon i wyodrębnia nazwę sklepu, produkty, ceny i sumy."
+      },
+      "step3": {
+        "title": "Śledź i analizuj",
+        "description": "Przeglądaj raporty wydatków, filtruj według kategorii i zrozum gdzie idą Twoje pieniądze."
+      }
+    },
+    "pricing": {
+      "title": "Proste ceny",
+      "subtitle": "Zacznij za darmo z {count} kredytami. Dokup więcej gdy potrzebujesz.",
+      "perCredit": "{price} za kredyt",
+      "credits": "{count} kredytów",
+      "neverExpires": "Nigdy nie wygasają",
+      "receiptScans": "{count} skanów paragonów",
+      "mostPopular": "Najpopularniejszy",
+      "bestValue": "Najlepsza wartość",
+      "buyNow": "Kup teraz",
+      "startFree": "Zacznij za darmo z {count} kredytami"
+    },
+    "cta": {
+      "title": "Gotowy uprościć śledzenie wydatków?",
+      "subtitle": "Dołącz do tysięcy użytkowników, którzy oszczędzają czas dzięki skanowaniu paragonów przez AI. Zacznij za darmo już dziś.",
+      "button": "Rozpocznij za darmo",
+      "noCreditCard": "Bez karty kredytowej. {count} darmowych skanów w zestawie."
+    }
+  },
+  "dashboard": {
+    "welcome": "Witaj ponownie{name, select, other {, {name}} }!",
+    "weeklyStats": "Ten tydzień",
+    "totalSpent": "Suma wydatków",
+    "receiptsScanned": "Paragony",
+    "avgPerReceipt": "Średnia na paragon",
+    "scanReceipt": "Skanuj paragon",
+    "recentScans": "Ostatnie skany",
+    "viewAll": "Zobacz wszystkie"
+  },
+  "receipts": {
+    "title": "Paragony",
+    "empty": {
+      "title": "Brak paragonów",
+      "description": "Zeskanuj pierwszy paragon, aby rozpocząć śledzenie wydatków",
+      "cta": "Skanuj paragon"
+    },
+    "noResults": {
+      "title": "Brak wyników",
+      "description": "Spróbuj zmienić filtry lub zakres dat",
+      "clearFilters": "Wyczyść filtry"
+    },
+    "status": {
+      "pending": "Oczekuje",
+      "processing": "Przetwarzanie",
+      "completed": "Zakończono",
+      "failed": "Błąd"
+    },
+    "filters": {
+      "dateRange": "Zakres dat",
+      "category": "Kategoria",
+      "allCategories": "Wszystkie kategorie"
+    }
+  },
+  "receipt": {
+    "store": "Sklep",
+    "date": "Data",
+    "items": "Pozycje",
+    "subtotal": "Suma częściowa",
+    "tax": "Podatek",
+    "total": "Suma",
+    "notes": "Notatki",
+    "category": "Kategoria",
+    "addNote": "Dodaj notatkę...",
+    "reanalyze": "Analizuj ponownie",
+    "deleteConfirm": {
+      "title": "Usuń paragon",
+      "description": "Czy na pewno chcesz usunąć ten paragon? Tej operacji nie można cofnąć."
+    }
+  },
+  "reports": {
+    "title": "Raporty",
+    "period": {
+      "week": "Tydzień",
+      "month": "Miesiąc",
+      "year": "Rok",
+      "all": "Wszystko"
+    },
+    "summary": {
+      "totalSpent": "Suma wydatków",
+      "receipts": "Paragony",
+      "avgPerReceipt": "Średnia na paragon"
+    },
+    "byCategory": "Według kategorii",
+    "byStore": "Według sklepu",
+    "byDay": "Wydatki dzienne",
+    "noData": "Brak danych o wydatkach w tym okresie"
+  },
+  "profile": {
+    "title": "Profil",
+    "accountInfo": "Informacje o koncie",
+    "name": "Imię",
+    "email": "Email",
+    "memberSince": "Członek od",
+    "language": "Język",
+    "currency": "Preferowana waluta",
+    "credits": "Kredyty",
+    "creditsAvailable": "dostępnych kredytów",
+    "buyCredits": "Kup kredyty",
+    "transactionHistory": "Historia transakcji",
+    "viewAllTransactions": "Zobacz wszystkie",
+    "noTransactions": "Brak transakcji",
+    "accountSettings": "Ustawienia konta",
+    "passwordSecurity": "Hasło i bezpieczeństwo",
+    "manage": "Zarządzaj",
+    "deleteAccount": "Usuń konto",
+    "deleteAccountDescription": "Trwale usuń swoje konto i wszystkie dane",
+    "deleteConfirm": {
+      "title": "Czy na pewno?",
+      "description": "Tej operacji nie można cofnąć. Spowoduje to trwałe usunięcie Twojego konta i wszystkich danych, w tym paragonów i kredytów."
+    }
+  },
+  "credits": {
+    "title": "Kup kredyty",
+    "currentBalance": "Aktualny stan: {count} kredytów",
+    "oneCredit": "1 kredyt = 1 skan paragonu",
+    "neverExpire": "Kredyty nigdy nie wygasają",
+    "securePayment": "Bezpieczna płatność przez Stripe",
+    "success": {
+      "title": "Płatność zakończona!",
+      "description": "{count} kredytów zostało dodanych do Twojego konta.",
+      "newBalance": "Nowy stan: {count} kredytów",
+      "startScanning": "Zacznij skanować"
+    },
+    "balance": {
+      "low": "Niski stan",
+      "empty": "Brak kredytów"
+    },
+    "insufficient": {
+      "title": "Brak kredytów",
+      "description": "Kup więcej kredytów, aby kontynuować skanowanie paragonów",
+      "cta": "Kup kredyty"
+    }
+  },
+  "transactions": {
+    "types": {
+      "signup_bonus": "Bonus powitalny",
+      "purchase": "Zakup",
+      "usage": "Skan paragonu",
+      "refund": "Zwrot"
+    }
+  },
+  "upload": {
+    "dropzone": "Upuść zdjęcie paragonu tutaj lub kliknij, aby wybrać",
+    "scanning": "Skanowanie...",
+    "processing": "Przetwarzanie paragonu..."
+  },
+  "errors": {
+    "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+    "uploadFailed": "Nie udało się wgrać pliku",
+    "saveFailed": "Nie udało się zapisać zmian",
+    "deleteFailed": "Nie udało się usunąć",
+    "reanalyzeFailed": "Nie udało się ponownie przeanalizować",
+    "unauthorized": "Zaloguj się, aby kontynuować",
+    "notFound": "Nie znaleziono",
+    "insufficientCredits": "Potrzebujesz co najmniej 1 kredytu, aby zeskanować paragon",
+    "rateLimited": "Zbyt wiele żądań. Poczekaj chwilę."
+  },
+  "success": {
+    "saved": "Zapisano zmiany",
+    "deleted": "Usunięto pomyślnie",
+    "uploaded": "Wgrywanie zakończone"
+  }
+}

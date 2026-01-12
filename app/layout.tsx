@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { NavBar } from "@/components/nav-bar";
 import { DesktopNav } from "@/components/desktop-nav";
 import { Providers } from "@/components/providers";
@@ -19,8 +21,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Receipt Scanner",
-  description: "Scan and track your receipts with AI",
+  title: "Paragon",
+  description: "Scan your receipts & track your spending with zero effort",
 };
 
 export const viewport: Viewport = {
@@ -30,25 +32,30 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <ClerkProvider>
-      <html lang="en" className={nunitoSans.variable}>
+      <html lang={locale} className={nunitoSans.variable}>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary/30 min-h-screen`}
         >
-          <Providers>
-            <div className="bg-noise" />
-            <div className="relative flex flex-col min-h-screen">
-              <DesktopNav />
-              <main className="flex-1 pb-24 md:pb-0">{children}</main>
-              <NavBar />
-            </div>
-          </Providers>
+          <NextIntlClientProvider messages={messages}>
+            <Providers>
+              <div className="bg-noise" />
+              <div className="relative flex flex-col min-h-screen">
+                <DesktopNav />
+                <main className="flex-1 pb-24 md:pb-0">{children}</main>
+                <NavBar />
+              </div>
+            </Providers>
+          </NextIntlClientProvider>
         </body>
       </html>
     </ClerkProvider>
