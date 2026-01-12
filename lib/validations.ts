@@ -77,7 +77,8 @@ export const reportParamsSchema = z.object({
 });
 
 // File upload validation
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// Vercel serverless functions have a 4.5MB body limit
+export const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",

@@ -65,40 +65,52 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
     if (files.length === 0) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
+    const allQueued: QueuedReceipt[] = [];
+    const filesToUpload = [...files];
 
-    try {
-      const res = await fetch("/api/receipts/queue", {
-        method: "POST",
-        body: formData,
-      });
+    setFiles([]);
+    setPreviews([]);
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Upload failed");
+    // Upload files sequentially to avoid payload size limits
+    for (const file of filesToUpload) {
+      const formData = new FormData();
+      formData.append("files", file);
+
+      try {
+        const res = await fetch("/api/receipts/queue", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: "Upload failed" }));
+          toast.error(`Failed to upload ${file.name}`, {
+            description: error.error || error.message || "Upload failed",
+          });
+          continue;
+        }
+
+        const data = await res.json();
+        const receipt = data.receipts[0];
+
+        const queued: QueuedReceipt = {
+          id: receipt.id,
+          filename: receipt.filename,
+          status: "pending",
+          imagePath: receipt.imagePath,
+        };
+
+        allQueued.push(queued);
+        setQueued([...allQueued]);
+      } catch (error) {
+        toast.error(`Failed to upload ${file.name}`);
       }
+    }
 
-      const data = await res.json();
-
-      // Initialize queued receipts with pending status
-      const initial: QueuedReceipt[] = data.receipts.map((r: any) => ({
-        id: r.id,
-        filename: r.filename,
-        status: "pending" as const,
-        imagePath: r.imagePath,
-      }));
-
-      setQueued(initial);
-      setFiles([]);
-      setPreviews([]);
-
-      // Start listening for status updates via SSE
-      pollStatus(initial.map((r) => r.id));
-    } catch (error) {
-      toast.error("Upload failed", {
-        description: error instanceof Error ? error.message : "Failed to upload receipts",
-      });
+    if (allQueued.length > 0) {
+      // Start listening for status updates
+      pollStatus(allQueued.map((r) => r.id));
+    } else {
       setIsUploading(false);
     }
   };
