@@ -22,24 +22,36 @@ export default async function ProfilePage() {
   const transactions = await getUserTransactions(dbUser.id, { limit: 10 });
 
   return (
-    <div className="container max-w-2xl px-6 py-10 space-y-6">
-      <h1 className="text-4xl font-black tracking-tight">Profile</h1>
+    <div className="min-h-screen">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-30 glass backdrop-blur-2xl md:hidden">
+        <div className="container px-6 py-5 max-w-5xl mx-auto">
+          <h1 className="text-2xl font-black tracking-tight">Profile</h1>
+        </div>
+      </header>
 
-      <UserInfo
-        name={clerkUser.fullName ?? clerkUser.firstName ?? "User"}
-        email={clerkUser.emailAddresses[0]?.emailAddress ?? ""}
-        createdAt={dbUser.createdAt}
-        preferredCurrency={dbUser.preferredCurrency ?? "PLN"}
-      />
+      {/* Desktop Header */}
+      <div className="hidden md:block container px-6 pt-8 pb-4 max-w-5xl mx-auto">
+        <h1 className="text-3xl font-black tracking-tight">Profile</h1>
+      </div>
 
-      <CreditSection credits={dbUser.credits} />
+      <main className="container px-6 py-8 md:pt-4 max-w-2xl mx-auto space-y-6">
+        <UserInfo
+          name={clerkUser.fullName ?? clerkUser.firstName ?? "User"}
+          email={clerkUser.emailAddresses[0]?.emailAddress ?? ""}
+          createdAt={dbUser.createdAt}
+          preferredCurrency={dbUser.preferredCurrency ?? "PLN"}
+        />
 
-      <TransactionHistory
-        transactions={transactions}
-        showViewAll={transactions.length >= 10}
-      />
+        <CreditSection credits={dbUser.credits} />
 
-      <AccountSettings />
+        <TransactionHistory
+          transactions={transactions}
+          showViewAll={transactions.length >= 10}
+        />
+
+        <AccountSettings />
+      </main>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createImagePreview } from "@/lib/image-utils";
 
 interface QueuedReceipt {
   id: string;
@@ -31,34 +32,46 @@ interface BulkUploadProps {
 
 export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<Map<number, string>>(new Map());
   const [queued, setQueued] = useState<QueuedReceipt[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileIdCounter = useRef(0);
+  const [fileIds, setFileIds] = useState<number[]>([]);
 
-  const handleFiles = (newFiles: FileList | null) => {
+  const handleFiles = async (newFiles: FileList | null) => {
     if (!newFiles) return;
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
-    const validFiles = Array.from(newFiles).filter((f) =>
-      validTypes.includes(f.type)
-    );
-
-    // Generate previews
-    validFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviews((prev) => [...prev, e.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
+    const validExts = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
+    const validFiles = Array.from(newFiles).filter((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase();
+      return ext && validExts.includes(ext);
     });
 
+    // Assign IDs and generate previews
+    const newIds: number[] = [];
+    for (const file of validFiles) {
+      const id = fileIdCounter.current++;
+      newIds.push(id);
+
+      createImagePreview(file).then((preview) => {
+        setPreviews((prev) => new Map(prev).set(id, preview));
+      });
+    }
+
+    setFileIds((prev) => [...prev, ...newIds]);
     setFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeFile = (index: number) => {
+    const idToRemove = fileIds[index];
     setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+    setFileIds((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => {
+      const next = new Map(prev);
+      next.delete(idToRemove);
+      return next;
+    });
   };
 
   const handleUpload = async () => {
@@ -69,7 +82,8 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
     const filesToUpload = [...files];
 
     setFiles([]);
-    setPreviews([]);
+    setFileIds([]);
+    setPreviews(new Map());
 
     // Upload files sequentially to avoid payload size limits
     for (const file of filesToUpload) {
@@ -324,25 +338,37 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
             {files.length} file{files.length !== 1 ? "s" : ""} selected
           </p>
           <div className="grid grid-cols-4 gap-2">
-            {previews.map((preview, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={preview}
-                  alt=""
-                  className="aspect-square object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFile(index);
-                  }}
-                  className="absolute -top-2 -right-2 size-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <HugeiconsIcon icon={Delete02Icon} className="size-3" />
-                </button>
-              </div>
-            ))}
+            {fileIds.map((id, index) => {
+              const preview = previews.get(id);
+              return (
+                <div key={id} className="relative group">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt=""
+                      className="aspect-square object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="aspect-square rounded-lg bg-muted/50 flex items-center justify-center">
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        className="size-6 text-muted-foreground animate-spin"
+                      />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
+                    className="absolute -top-2 -right-2 size-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} className="size-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

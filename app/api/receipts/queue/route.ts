@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
-import { getServerSupabaseClient, createReceipt } from "@/lib/db";
+import { getServerSupabaseClient, createReceipt, updateReceiptStatus } from "@/lib/db";
 import { v4 as uuid } from "uuid";
-import { requireAuth } from "@/lib/auth";
+import { requireAuthWithUser } from "@/lib/auth";
 import { hasCredits } from "@/lib/credits";
 import { validateFile, MAX_FILE_SIZE } from "@/lib/validations";
+import sharp from "sharp";
+import decode from "heic-decode";
 
 // Storage bucket name for receipt images
 const STORAGE_BUCKET = "receipts";
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const userId = await requireAuthWithUser();
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
 
@@ -52,17 +54,41 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const file of files) {
-      // Generate unique filename
-      const ext = file.name.split(".").pop() || "jpg";
+      const originalExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const isHeic = originalExt === "heic" || originalExt === "heif";
+
+      // Convert HEIC/HEIF to JPEG for browser compatibility
+      let fileBuffer: Buffer;
+      let contentType: string;
+      let ext: string;
+
+      if (isHeic) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        // Decode HEIC to raw pixels, then encode as JPEG with sharp
+        const { width, height, data } = await decode({ buffer });
+        fileBuffer = await sharp(data, {
+          raw: { width, height, channels: 4 },
+        })
+          .jpeg({ quality: 90 })
+          .toBuffer();
+        contentType = "image/jpeg";
+        ext = "jpg";
+      } else {
+        const bytes = await file.arrayBuffer();
+        fileBuffer = Buffer.from(bytes);
+        contentType = file.type;
+        ext = originalExt;
+      }
+
       const filename = `${uuid()}-${Date.now()}.${ext}`;
       const storagePath = `uploads/${filename}`;
 
       // Upload file to Supabase Storage
-      const bytes = await file.arrayBuffer();
       const { error: uploadError } = await supabase.storage
         .from(STORAGE_BUCKET)
-        .upload(storagePath, Buffer.from(bytes), {
-          contentType: file.type,
+        .upload(storagePath, fileBuffer, {
+          contentType,
           upsert: false,
         });
 
@@ -87,8 +113,21 @@ export async function POST(request: NextRequest) {
         status: "pending",
       });
 
-      // Start workflow (fire-and-forget)
-      await start(processReceiptWorkflow, [receiptId, imagePath]);
+      // Start workflow - if this fails, mark receipt as failed to avoid stuck state
+      try {
+        await start(processReceiptWorkflow, [receiptId, imagePath]);
+      } catch (workflowError) {
+        console.error("Failed to start workflow:", workflowError);
+        await updateReceiptStatus(
+          receiptId,
+          "failed",
+          workflowError instanceof Error ? workflowError.message : "Failed to start processing"
+        );
+        return NextResponse.json(
+          { error: "Failed to start receipt processing" },
+          { status: 500 }
+        );
+      }
 
       queuedReceipts.push({
         id: receiptId,

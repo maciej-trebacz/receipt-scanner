@@ -128,6 +128,17 @@ export async function getUser(id: string): Promise<User | null> {
   };
 }
 
+export async function ensureUser(clerkUser: { id: string; email: string; name: string | null }): Promise<User> {
+  const existing = await getUser(clerkUser.id);
+  if (existing) return existing;
+
+  return createUser({
+    id: clerkUser.id,
+    email: clerkUser.email,
+    name: clerkUser.name,
+  });
+}
+
 export async function deleteUser(id: string): Promise<void> {
   const supabase = getServerSupabaseClient();
 

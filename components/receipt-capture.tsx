@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -12,6 +12,7 @@ import {
   Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { createImagePreview } from "@/lib/image-utils";
 
 interface ReceiptCaptureProps {
   onCapture?: (file: File) => void;
@@ -28,19 +29,22 @@ export function ReceiptCapture({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
     setSelectedFile(file);
+    setIsLoadingPreview(true);
     onCapture?.(file);
+
+    try {
+      const preview = await createImagePreview(file);
+      setPreview(preview);
+    } finally {
+      setIsLoadingPreview(false);
+    }
   };
 
   const handleClear = () => {
@@ -50,11 +54,18 @@ export function ReceiptCapture({
     if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
+  // Clear preview after upload completes (isLoading goes from true to false)
+  const wasLoading = useRef(false);
+  useEffect(() => {
+    if (wasLoading.current && !isLoading) {
+      handleClear();
+    }
+    wasLoading.current = isLoading;
+  }, [isLoading]);
+
   const handleConfirm = () => {
     if (selectedFile) {
       onScan(selectedFile);
-      // Clear the preview after upload starts
-      handleClear();
     }
   };
 
@@ -81,29 +92,43 @@ export function ReceiptCapture({
 
       {!preview ? (
         <div className="glass-card p-8 flex flex-col items-center text-center">
-          <div className="size-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-6 animate-float">
-            <HugeiconsIcon icon={Invoice01Icon} className="size-12" />
-          </div>
-          <h2 className="text-2xl font-black tracking-tight mb-2">Ready to scan?</h2>
-          <p className="text-muted-foreground mb-8 max-w-[240px]">
-            Take a photo or upload an image of your receipt.
-          </p>
-          <div className="flex flex-col w-full gap-3">
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="w-full h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
-            >
-              <HugeiconsIcon icon={Camera01Icon} className="size-6 stroke-[2.5]" />
-              Scan with Camera
-            </button>
-            <button
-              onClick={() => galleryInputRef.current?.click()}
-              className="w-full h-14 text-foreground font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
-            >
-              <HugeiconsIcon icon={Image01Icon} className="size-6" />
-              Select from Gallery
-            </button>
-          </div>
+          {isLoadingPreview ? (
+            <>
+              <div className="size-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-6">
+                <HugeiconsIcon icon={Loading03Icon} className="size-12 animate-spin" />
+              </div>
+              <h2 className="text-2xl font-black tracking-tight mb-2">Loading preview...</h2>
+              <p className="text-muted-foreground mb-8 max-w-[240px]">
+                Converting image for preview
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="size-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mb-6 animate-float">
+                <HugeiconsIcon icon={Invoice01Icon} className="size-12" />
+              </div>
+              <h2 className="text-2xl font-black tracking-tight mb-2">Ready to scan?</h2>
+              <p className="text-muted-foreground mb-8 max-w-[240px]">
+                Take a photo or upload an image of your receipt.
+              </p>
+              <div className="flex flex-col w-full gap-3">
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full h-14 bg-primary text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
+                >
+                  <HugeiconsIcon icon={Camera01Icon} className="size-6 stroke-[2.5]" />
+                  Scan with Camera
+                </button>
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="w-full h-14 text-foreground font-bold rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+                >
+                  <HugeiconsIcon icon={Image01Icon} className="size-6" />
+                  Select from Gallery
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

@@ -11,6 +11,7 @@ import {
   Analytics01Icon,
   Add01Icon,
   Invoice02Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { CreditBalance } from "./credit-balance";
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/dashboard", icon: Home01Icon, label: "Dashboard" },
   { href: "/receipts", icon: Invoice01Icon, label: "Receipts" },
   { href: "/reports", icon: Analytics01Icon, label: "Reports" },
+  { href: "/profile", icon: UserCircleIcon, label: "Profile" },
 ];
 
 export function DesktopNav() {

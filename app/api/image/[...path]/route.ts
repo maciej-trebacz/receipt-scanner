@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, stat } from "fs/promises";
-import { join } from "path";
 import { requireAuth } from "@/lib/auth";
+import { getServerSupabaseClient } from "@/lib/db";
 
 interface RouteParams {
   params: Promise<{ path: string[] }>;
@@ -20,35 +19,36 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     await requireAuth();
     const { path } = await params;
-    const relativePath = path.join("/");
+    const fullPath = path.join("/");
 
     // Security: prevent directory traversal
-    if (relativePath.includes("..")) {
+    if (fullPath.includes("..")) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
-    // Only allow access to uploads directory
-    if (!relativePath.startsWith("uploads/")) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    // Path format: bucket/uploads/filename.ext (e.g., receipts/uploads/uuid.jpg)
+    const [bucket, ...pathParts] = fullPath.split("/");
+    const storagePath = pathParts.join("/");
+
+    if (!bucket || !storagePath) {
+      return NextResponse.json({ error: "Invalid path format" }, { status: 400 });
     }
 
-    const fullPath = join("./data", relativePath);
+    const supabase = getServerSupabaseClient();
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .download(storagePath);
 
-    // Check if file exists
-    try {
-      await stat(fullPath);
-    } catch {
+    if (error) {
+      console.error("Storage download error:", error);
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Read file
-    const fileBuffer = await readFile(fullPath);
-
-    // Determine content type
-    const ext = relativePath.split(".").pop()?.toLowerCase() || "";
+    const arrayBuffer = await data.arrayBuffer();
+    const ext = fullPath.split(".").pop()?.toLowerCase() || "";
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=31536000, immutable",

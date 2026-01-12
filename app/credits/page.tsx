@@ -43,55 +43,66 @@ export default function CreditsPage() {
   };
 
   return (
-    <div className="container max-w-4xl px-6 py-10">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-black tracking-tight mb-3">Buy Credits</h1>
-        <p className="text-muted-foreground text-lg">
+    <div className="min-h-screen">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-30 glass backdrop-blur-2xl md:hidden">
+        <div className="container px-6 py-5 max-w-5xl mx-auto">
+          <h1 className="text-2xl font-black tracking-tight">Buy Credits</h1>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block container px-6 pt-8 pb-4 max-w-5xl mx-auto">
+        <h1 className="text-3xl font-black tracking-tight">Buy Credits</h1>
+      </div>
+
+      <main className="container px-6 py-8 md:pt-4 max-w-4xl mx-auto">
+        <p className="text-muted-foreground text-lg text-center mb-10">
           Credits are used to scan receipts. Each scan costs 1 credit.
         </p>
-      </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {CREDIT_PACKAGES.map((pkg) => (
-          <Card
-            key={pkg.id}
-            className={cn(
-              "glass-card relative overflow-hidden transition-all hover:scale-[1.02]",
-              "badge" in pkg && pkg.badge === "Best Value" && "ring-2 ring-primary"
-            )}
-          >
-            {"badge" in pkg && (
-              <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl">
-                {pkg.badge}
-              </div>
-            )}
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-5xl font-black">
-                {pkg.credits}
-              </CardTitle>
-              <CardDescription className="text-lg">credits</CardDescription>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <div className="text-3xl font-bold">{pkg.priceDisplay}</div>
-              <div className="text-sm text-muted-foreground">
-                ${(pkg.price / 100 / pkg.credits).toFixed(3)} per credit
-              </div>
-              <Button
-                className="w-full rounded-xl font-bold"
-                size="lg"
-                onClick={() => handlePurchase(pkg)}
-                disabled={loading !== null}
-              >
-                {loading === pkg.id ? "Processing..." : "Buy Now"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          {CREDIT_PACKAGES.map((pkg) => (
+            <Card
+              key={pkg.id}
+              className={cn(
+                "glass-card relative overflow-hidden transition-all hover:scale-[1.02]",
+                "badge" in pkg && pkg.badge === "Best Value" && "ring-2 ring-primary"
+              )}
+            >
+              {"badge" in pkg && (
+                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl">
+                  {pkg.badge}
+                </div>
+              )}
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-5xl font-black">
+                  {pkg.credits}
+                </CardTitle>
+                <CardDescription className="text-lg">credits</CardDescription>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <div className="text-3xl font-bold">{pkg.priceDisplay}</div>
+                <div className="text-sm text-muted-foreground">
+                  ${(pkg.price / 100 / pkg.credits).toFixed(3)} per credit
+                </div>
+                <Button
+                  className="w-full rounded-xl font-bold"
+                  size="lg"
+                  onClick={() => handlePurchase(pkg)}
+                  disabled={loading !== null}
+                >
+                  {loading === pkg.id ? "Processing..." : "Buy Now"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      <div className="mt-10 text-center text-sm text-muted-foreground">
-        <p>Secure payment powered by Stripe. Credits never expire.</p>
-      </div>
+        <div className="mt-10 text-center text-sm text-muted-foreground">
+          <p>Secure payment powered by Stripe. Credits never expire.</p>
+        </div>
+      </main>
     </div>
   );
 }

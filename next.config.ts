@@ -25,6 +25,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Apply withWorkflow first, then withNextIntl
-// Using any to work around type incompatibility between the two plugins
-export default withNextIntl(withWorkflow(nextConfig) as any);
+// withWorkflow must be outermost to properly discover workflow directives
+export default withWorkflow(withNextIntl(nextConfig));
