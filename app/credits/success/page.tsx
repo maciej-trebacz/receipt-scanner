@@ -15,13 +15,13 @@ export default function SuccessPage() {
     <div className="min-h-screen">
       {/* Mobile Header */}
       <header className="sticky top-0 z-30 glass backdrop-blur-2xl md:hidden">
-        <div className="container px-6 py-5 max-w-5xl mx-auto">
+        <div className="container px-6 py-5 max-w-5xl mx-auto text-center">
           <h1 className="text-2xl font-black tracking-tight">Payment Complete</h1>
         </div>
       </header>
 
       {/* Desktop Header */}
-      <div className="hidden md:block container px-6 pt-8 pb-4 max-w-5xl mx-auto">
+      <div className="hidden md:block container px-6 pt-8 pb-4 max-w-5xl mx-auto text-center">
         <h1 className="text-3xl font-black tracking-tight">Payment Complete</h1>
       </div>
 

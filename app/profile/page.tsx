@@ -35,7 +35,7 @@ export default async function ProfilePage() {
         <h1 className="text-3xl font-black tracking-tight">Profile</h1>
       </div>
 
-      <main className="container px-6 py-8 md:pt-4 max-w-2xl mx-auto space-y-6">
+      <main className="container px-6 py-8 md:pt-4 max-w-5xl mx-auto space-y-6">
         <UserInfo
           name={clerkUser.fullName ?? clerkUser.firstName ?? "User"}
           email={clerkUser.emailAddresses[0]?.emailAddress ?? ""}
