@@ -12,6 +12,7 @@ import {
   Add01Icon,
   Invoice02Icon,
 } from "@hugeicons/core-free-icons";
+import { CreditBalance } from "./credit-balance";
 
 const navItems = [
   { href: "/", icon: Home01Icon, label: "Dashboard" },
@@ -81,6 +82,7 @@ export function DesktopNav() {
                 />
                 New Scan
               </Link>
+              <CreditBalance />
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
             <SignedOut>

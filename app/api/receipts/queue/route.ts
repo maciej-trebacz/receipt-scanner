@@ -4,18 +4,31 @@ import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
 import { getServerSupabaseClient, createReceipt } from "@/lib/db";
 import { v4 as uuid } from "uuid";
 import { requireAuth } from "@/lib/auth";
+import { hasCredits } from "@/lib/credits";
 
 // Storage bucket name for receipt images
 const STORAGE_BUCKET = "receipts";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const userId = await requireAuth();
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
 
     if (!files.length) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    }
+
+    // Check if user has enough credits for all files
+    const creditsNeeded = files.length;
+    if (!(await hasCredits(userId, creditsNeeded))) {
+      return NextResponse.json(
+        {
+          error: "insufficient_credits",
+          message: `You need at least ${creditsNeeded} credit${creditsNeeded > 1 ? "s" : ""} to scan ${creditsNeeded} receipt${creditsNeeded > 1 ? "s" : ""}`,
+        },
+        { status: 402 }
+      );
     }
 
     // Validate all files first
@@ -69,6 +82,7 @@ export async function POST(request: NextRequest) {
       // Create pending receipt record using centralized query function
       await createReceipt({
         id: receiptId,
+        userId,
         imagePath: imagePath,
         total: 0, // Placeholder, will be updated by workflow
         status: "pending",

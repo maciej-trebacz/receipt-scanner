@@ -3,8 +3,10 @@ import {
   getServerSupabaseClient,
   updateReceiptStatus as dbUpdateReceiptStatus,
   updateReceipt,
+  getReceiptSimple,
 } from "@/lib/db";
 import { extractReceiptData } from "@/lib/gemini";
+import { deductCredit } from "@/lib/credits";
 
 type ReceiptStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -112,6 +114,19 @@ async function saveExtractedData(
   });
 }
 
+// Step: Deduct credit after successful processing
+async function deductCreditForReceipt(receiptId: string) {
+  "use step";
+
+  const receipt = await getReceiptSimple(receiptId);
+  if (!receipt?.userId) {
+    console.warn(`Receipt ${receiptId} has no userId, skipping credit deduction`);
+    return;
+  }
+
+  await deductCredit(receipt.userId, 1, receiptId, "Receipt scan");
+}
+
 // Main workflow orchestrator
 export async function processReceiptWorkflow(
   receiptId: string,
@@ -131,6 +146,9 @@ export async function processReceiptWorkflow(
 
     // Save to database
     await saveExtractedData(receiptId, extractedData);
+
+    // Deduct credit after successful processing
+    await deductCreditForReceipt(receiptId);
 
     return { success: true, receiptId };
   } catch (error) {

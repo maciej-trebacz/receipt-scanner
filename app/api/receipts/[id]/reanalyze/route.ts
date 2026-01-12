@@ -3,6 +3,7 @@ import { getReceiptSimple, updateReceiptStatus } from "@/lib/db/queries";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
 import { requireAuth } from "@/lib/auth";
+import { hasCredits } from "@/lib/credits";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -11,8 +12,19 @@ interface RouteParams {
 // POST /api/receipts/[id]/reanalyze - Re-analyze receipt with Gemini (async via workflow)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireAuth();
+    const userId = await requireAuth();
     const { id } = await params;
+
+    // Check credits
+    if (!(await hasCredits(userId, 1))) {
+      return NextResponse.json(
+        {
+          error: "insufficient_credits",
+          message: "You need at least 1 credit to re-analyze a receipt",
+        },
+        { status: 402 }
+      );
+    }
 
     // Get the existing receipt
     const receipt = await getReceiptSimple(id);
