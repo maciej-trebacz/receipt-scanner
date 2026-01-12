@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
+import { requireAuth } from "@/lib/auth";
 
 interface RouteParams {
   params: Promise<{ path: string[] }>;
@@ -17,6 +18,7 @@ const MIME_TYPES: Record<string, string> = {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth();
     const { path } = await params;
     const relativePath = path.join("/");
 

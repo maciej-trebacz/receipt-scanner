@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReceiptsStatus } from "@/lib/db/queries";
+import { requireAuth } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth();
     const { ids } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0) {

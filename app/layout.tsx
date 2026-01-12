@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { NavBar } from "@/components/nav-bar";
 import { DesktopNav } from "@/components/desktop-nav";
 import { Providers } from "@/components/providers";
@@ -35,19 +36,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={nunitoSans.variable}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary/30 min-h-screen`}
-      >
-        <Providers>
-          <div className="bg-noise" />
-          <div className="relative flex flex-col min-h-screen">
-            <DesktopNav />
-            <main className="flex-1 pb-24 md:pb-0">{children}</main>
-            <NavBar />
-          </div>
-        </Providers>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={nunitoSans.variable}>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary/30 min-h-screen`}
+        >
+          <Providers>
+            <div className="bg-noise" />
+            <div className="relative flex flex-col min-h-screen">
+              <DesktopNav />
+              <main className="flex-1 pb-24 md:pb-0">{children}</main>
+              <NavBar />
+            </div>
+          </Providers>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

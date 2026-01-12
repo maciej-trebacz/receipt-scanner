@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
+import { requireAuth } from "@/lib/auth";
 
 const UPLOAD_DIR = "./data/uploads/receipts";
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 

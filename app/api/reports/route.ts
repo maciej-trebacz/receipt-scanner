@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReportsData, type Period } from "@/lib/reports";
+import { requireAuth } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth();
     const { searchParams } = new URL(request.url);
     const periodParam = searchParams.get("period") || "month";
     const offsetParam = searchParams.get("offset") || "0";

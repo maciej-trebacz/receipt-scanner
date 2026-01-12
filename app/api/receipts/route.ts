@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listReceipts, createReceipt } from "@/lib/db/queries";
+import { requireAuth } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 
 // GET /api/receipts - List all receipts with pagination and date filtering
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth();
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
 // POST /api/receipts - Create a new receipt
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth();
     const body = await request.json();
     const {
       storeName,

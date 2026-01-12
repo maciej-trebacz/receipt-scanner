@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getReceiptSimple, updateReceiptStatus } from "@/lib/db/queries";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
+import { requireAuth } from "@/lib/auth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -10,6 +11,7 @@ interface RouteParams {
 // POST /api/receipts/[id]/reanalyze - Re-analyze receipt with Gemini (async via workflow)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth();
     const { id } = await params;
 
     // Get the existing receipt

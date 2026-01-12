@@ -5,6 +5,7 @@ import {
   deleteReceipt,
   receiptExists,
 } from "@/lib/db/queries";
+import { requireAuth } from "@/lib/auth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,6 +14,7 @@ interface RouteParams {
 // GET /api/receipts/[id] - Get a single receipt
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth();
     const { id } = await params;
 
     const receipt = await getReceiptById(id);
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/receipts/[id] - Update a receipt
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth();
     const { id } = await params;
     const body = await request.json();
     const {
@@ -98,6 +101,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/receipts/[id] - Delete a receipt
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireAuth();
     const { id } = await params;
 
     // Check if receipt exists

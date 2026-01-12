@@ -3,12 +3,14 @@ import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
 import { getServerSupabaseClient, createReceipt } from "@/lib/db";
 import { v4 as uuid } from "uuid";
+import { requireAuth } from "@/lib/auth";
 
 // Storage bucket name for receipt images
 const STORAGE_BUCKET = "receipts";
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAuth();
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
 

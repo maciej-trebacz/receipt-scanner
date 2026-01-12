@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -67,17 +68,36 @@ export function DesktopNav() {
             })}
           </nav>
 
-          {/* Quick Scan CTA */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all duration-300 group"
-          >
-            <HugeiconsIcon
-              icon={Add01Icon}
-              className="size-4 stroke-[2.5] group-hover:rotate-90 transition-transform duration-300"
-            />
-            New Scan
-          </Link>
+          {/* Right side: Scan CTA + Auth */}
+          <div className="flex items-center gap-4">
+            <SignedIn>
+              <Link
+                href="/"
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all duration-300 group"
+              >
+                <HugeiconsIcon
+                  icon={Add01Icon}
+                  className="size-4 stroke-[2.5] group-hover:rotate-90 transition-transform duration-300"
+                />
+                New Scan
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/sign-up"
+                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all duration-300"
+              >
+                Get Started
+              </Link>
+            </SignedOut>
+          </div>
         </div>
       </div>
     </header>

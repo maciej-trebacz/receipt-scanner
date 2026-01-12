@@ -1,4 +1,4 @@
-import { db, categories } from "./index";
+import { getServerSupabaseClient } from "./supabase";
 import { v4 as uuid } from "uuid";
 
 const defaultCategories = [
@@ -15,24 +15,29 @@ const defaultCategories = [
 async function seed() {
   console.log("Seeding categories...");
 
-  const now = new Date();
+  const supabase = getServerSupabaseClient();
+  const now = new Date().toISOString();
 
   for (const cat of defaultCategories) {
-    await db
-      .insert(categories)
-      .values({
+    const { error } = await supabase.from("categories").upsert(
+      {
         id: uuid(),
         name: cat.name,
         icon: cat.icon,
         color: cat.color,
-        createdAt: now,
-      })
-      .onConflictDoNothing();
+        created_at: now,
+      },
+      { onConflict: "name" }
+    );
+
+    if (error) {
+      console.error(`Failed to seed ${cat.name}:`, error);
+    }
   }
 
-  const result = await db.select().from(categories);
-  console.log(`Seeded ${result.length} categories:`);
-  result.forEach((c) => console.log(`  - ${c.name} (${c.icon})`));
+  const { data: result } = await supabase.from("categories").select("*");
+  console.log(`Seeded ${result?.length || 0} categories:`);
+  result?.forEach((c) => console.log(`  - ${c.name} (${c.icon})`));
 }
 
 seed().catch(console.error);
