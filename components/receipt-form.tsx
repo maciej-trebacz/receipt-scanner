@@ -115,7 +115,7 @@ export function ReceiptForm({
     <form onSubmit={handleSubmit} className="space-y-10">
       {/* Basic Info Section */}
       <section className="space-y-6">
-        <div className="flex items-center gap-2 text-primary">
+        <div className="flex items-center gap-2 text-primary-text">
           <HugeiconsIcon icon={Store01Icon} className="size-5" />
           <h3 className="text-sm font-black uppercase tracking-widest">Store & Date</h3>
         </div>
@@ -168,7 +168,7 @@ export function ReceiptForm({
       {/* Items Section */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-primary">
+          <div className="flex items-center gap-2 text-primary-text">
             <HugeiconsIcon icon={Invoice01Icon} className="size-5" />
             <h3 className="text-sm font-black uppercase tracking-widest">Line Items</h3>
           </div>
@@ -234,7 +234,7 @@ export function ReceiptForm({
                         />
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] font-black text-primary uppercase ml-1">Total</span>
+                        <span className="text-[9px] font-black text-primary-text uppercase ml-1">Total</span>
                         <Input
                           type="number"
                           value={item.totalPrice}
@@ -261,7 +261,7 @@ export function ReceiptForm({
 
       {/* Financials Section */}
       <section className="space-y-6">
-        <div className="flex items-center gap-2 text-primary">
+        <div className="flex items-center gap-2 text-primary-text">
           <HugeiconsIcon icon={Tag01Icon} className="size-5" />
           <h3 className="text-sm font-black uppercase tracking-widest">Financial Summary</h3>
         </div>
@@ -292,7 +292,7 @@ export function ReceiptForm({
               />
             </Field>
             <Field>
-              <Label className="text-[10px] font-black uppercase tracking-wider text-primary ml-1 mb-2 block">Grand Total</Label>
+              <Label className="text-[10px] font-black uppercase tracking-wider text-primary-text ml-1 mb-2 block">Grand Total</Label>
               <Input
                 type="number"
                 value={formData.total}
@@ -308,7 +308,7 @@ export function ReceiptForm({
 
       {/* Notes Section */}
       <section className="space-y-6">
-        <div className="flex items-center gap-2 text-primary">
+        <div className="flex items-center gap-2 text-primary-text">
           <HugeiconsIcon icon={Note01Icon} className="size-5" />
           <h3 className="text-sm font-black uppercase tracking-widest">Additional Notes</h3>
         </div>

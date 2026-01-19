@@ -126,7 +126,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-7 space-y-10">
           <section className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
+              <div className="flex items-center gap-2 text-primary-text font-black uppercase tracking-widest text-xs">
                 <HugeiconsIcon icon={Invoice02Icon} className="size-4" />
                 {mode === "capture" ? "Capture New Receipt" : "Bulk Upload"}
               </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             <Link href="/reports" className="glass-card p-6 hover:border-primary/30 transition-all group">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Weekly Spend</p>
               <p className="text-2xl font-black">{formatCurrency(weeklyStats.totalSpent)} <span className="text-xs text-muted-foreground">PLN</span></p>
-              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary">
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary-text">
                 <HugeiconsIcon icon={ChartLineData02Icon} className="size-3 group-hover:translate-x-0.5 transition-transform" />
                 View full reports
               </div>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
             <Link href="/reports" className="glass-card p-6 hover:border-primary/30 transition-all group">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Top Product Type</p>
               <p className="text-2xl font-black capitalize">{weeklyStats.topProductType || "—"}</p>
-              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary">
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-primary-text">
                 <div className="size-1.5 rounded-full bg-primary animate-pulse" />
                 {weeklyStats.topProductPercentage > 0
                   ? `${weeklyStats.topProductPercentage.toFixed(1)}% of total spend`
@@ -179,7 +179,7 @@ export default function DashboardPage() {
         {/* Right Col: Recent Activity */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
+            <div className="flex items-center gap-2 text-primary-text font-black uppercase tracking-widest text-xs">
               <HugeiconsIcon icon={Note01Icon} className="size-4" />
               Recent Scans
             </div>

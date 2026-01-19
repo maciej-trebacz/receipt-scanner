@@ -507,7 +507,7 @@ export default function ReceiptDetailPage({
                                   {item.inferredName || item.name}
                                 </p>
                                 {item.productType && (
-                                  <span className="text-[10px] font-black uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded-md">
+                                  <span className="text-[10px] font-black uppercase tracking-wider bg-primary/20 text-primary-text px-1.5 py-0.5 rounded-md">
                                     {item.productType}
                                   </span>
                                 )}
@@ -544,7 +544,7 @@ export default function ReceiptDetailPage({
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-4">
-                  <span className="text-lg font-black uppercase tracking-widest text-primary">Final Price</span>
+                  <span className="text-lg font-black uppercase tracking-widest text-primary-text">Final Price</span>
                   <span className="text-2xl font-black">{formatCurrency(receipt.total, receipt.currency || "PLN")}</span>
                 </div>
               </div>

@@ -10,7 +10,7 @@ export function CTA() {
             Ready to simplify expense tracking?
           </h2>
           <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto">
-            Join thousands of users who save time with AI-powered receipt scanning.
+            Join smart spenders who save time with AI-powered receipt scanning.
             Start free today.
           </p>
           <Button

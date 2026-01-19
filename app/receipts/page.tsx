@@ -10,7 +10,7 @@ export default function ReceiptsPage() {
         <div className="container px-6 py-6 flex items-center justify-between max-w-5xl mx-auto">
           <div>
             <h1 className="text-3xl font-black tracking-tight">Receipts</h1>
-            <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] mt-1">Transaction History</p>
+            <p className="text-xs font-bold text-primary-text uppercase tracking-[0.2em] mt-1">Transaction History</p>
           </div>
           <Link
             href="/"

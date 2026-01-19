@@ -9,17 +9,16 @@ export function Hero() {
     <section className="relative py-20 md:py-32 overflow-hidden">
       <div className="container px-6 max-w-5xl mx-auto">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-bold mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary-text text-sm font-bold mb-8">
             <HugeiconsIcon icon={Invoice02Icon} className="size-4" />
             AI-Powered Receipt Scanning
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-6">
-            Track your spending{" "}
-            <span className="text-primary">with zero effort</span>
+            Stop Manually <br className="hidden md:block" />
+            <span className="text-primary-text">Typing Receipts</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Snap a photo of any receipt. Our AI instantly extracts and categorizes
-            every item. Track spending with beautiful reports.
+            Paragone turns your paper clutter into digital insights. Our AI instantly extracts every detail—store, date, items, and totals—so you don't have to.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="text-lg px-8 h-14 rounded-xl font-bold shadow-lg shadow-primary/30">

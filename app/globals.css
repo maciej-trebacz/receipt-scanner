@@ -34,6 +34,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -70,7 +71,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.25 0.02 240);
   /* Vibrant Lime */
-  --primary: oklch(0.85 0.18 135); 
+  --primary: oklch(0.85 0.18 135);
+  --primary-text: oklch(0.45 0.15 145);
   --primary-foreground: oklch(0.25 0.02 240);
   --secondary: oklch(0.92 0.02 240);
   --secondary-foreground: oklch(0.25 0.02 240);
@@ -95,6 +97,7 @@
   --popover-foreground: oklch(0.95 0.01 240);
   /* Electric Lime */
   --primary: oklch(0.88 0.22 138);
+  --primary-text: oklch(0.88 0.22 138);
   --primary-foreground: oklch(0.15 0.02 240);
   --secondary: oklch(0.22 0.02 240);
   --secondary-foreground: oklch(0.95 0.01 240);

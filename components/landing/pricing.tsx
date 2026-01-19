@@ -14,9 +14,9 @@ export function Pricing() {
     <section id="pricing" className="py-20 bg-muted/30">
       <div className="container px-6 max-w-5xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-black mb-4">Simple pricing</h2>
+          <h2 className="text-3xl md:text-4xl font-black mb-4">Pay As You Go. No Subscriptions.</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Start free with 5 credits. Buy more when you need them.
+            Don't get locked into another monthly fee. Buy credits that never expire.
             <br />
             1 credit = 1 receipt scan.
           </p>

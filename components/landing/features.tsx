@@ -34,7 +34,7 @@ export function Features() {
     <section id="features" className="py-20 bg-muted/30">
       <div className="container px-6 max-w-5xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-black mb-4">Everything you need</h2>
+          <h2 className="text-3xl md:text-4xl font-black mb-4">Automate Your Expense Tracking</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Stop manually entering receipts. Let AI do the work while you focus on
             what matters.

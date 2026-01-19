@@ -223,7 +223,7 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
         </div>
 
         {allCompleted && (
-          <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">
+          <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary-text text-sm">
             {completedCount} receipt{completedCount !== 1 ? "s" : ""} processed
             {failedCount > 0 && (
               <span className="text-destructive">
