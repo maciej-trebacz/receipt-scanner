@@ -7,9 +7,33 @@ import {
 } from "@/lib/db";
 import { extractReceiptData } from "@/lib/gemini";
 import { deductCredit } from "@/lib/credits";
-import { getPostHogClient } from "@/lib/posthog-server";
 import sharp from "sharp";
 import decode from "heic-decode";
+
+// Track events via PostHog HTTP API (avoids posthog-node ESM issues in workflow runtime)
+async function trackEvent(
+  event: string,
+  distinctId: string,
+  properties: Record<string, unknown>
+) {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) return;
+
+  try {
+    await fetch("https://eu.i.posthog.com/capture/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        event,
+        distinct_id: distinctId,
+        properties,
+      }),
+    });
+  } catch {
+    // Don't fail workflow if analytics fails
+  }
+}
 
 type ReceiptStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -139,6 +163,36 @@ async function deductCreditForReceipt(receiptId: string) {
   await deductCredit(receipt.userId, 1, receiptId, "Receipt scan");
 }
 
+// Step: Track completion event
+async function trackCompletion(
+  receiptId: string,
+  data: { storeName: string | null; total: number | null }
+) {
+  "use step";
+
+  const receipt = await getReceiptSimple(receiptId);
+  if (!receipt?.userId) return;
+
+  await trackEvent("receipt_processing_completed", receipt.userId, {
+    receipt_id: receiptId,
+    store_name: data.storeName,
+    total_amount: data.total,
+  });
+}
+
+// Step: Track failure event
+async function trackFailure(receiptId: string, errorMessage: string) {
+  "use step";
+
+  const receipt = await getReceiptSimple(receiptId);
+  if (!receipt?.userId) return;
+
+  await trackEvent("receipt_processing_failed", receipt.userId, {
+    receipt_id: receiptId,
+    error_message: errorMessage,
+  });
+}
+
 // Main workflow orchestrator
 export async function processReceiptWorkflow(
   receiptId: string,
@@ -162,45 +216,21 @@ export async function processReceiptWorkflow(
     // Deduct credit after successful processing
     await deductCreditForReceipt(receiptId);
 
-    // Track successful processing
-    const receipt = await getReceiptSimple(receiptId);
-    if (receipt?.userId) {
-      const posthog = getPostHogClient();
-      posthog.capture({
-        distinctId: receipt.userId,
-        event: "receipt_processing_completed",
-        properties: {
-          receipt_id: receiptId,
-          store_name: extractedData.storeName,
-          total_amount: extractedData.total,
-          currency: extractedData.currency,
-          item_count: extractedData.items.length,
-        },
-      });
-    }
+    // Track completion
+    await trackCompletion(receiptId, {
+      storeName: extractedData.storeName,
+      total: extractedData.total,
+    });
 
     return { success: true, receiptId };
   } catch (error) {
-    // Mark as failed with error message
-    await updateReceiptStatus(
-      receiptId,
-      "failed",
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-    // Track processing failure
-    const receipt = await getReceiptSimple(receiptId);
-    if (receipt?.userId) {
-      const posthog = getPostHogClient();
-      posthog.capture({
-        distinctId: receipt.userId,
-        event: "receipt_processing_failed",
-        properties: {
-          receipt_id: receiptId,
-          error_message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
+    // Mark as failed with error message
+    await updateReceiptStatus(receiptId, "failed", errorMessage);
+
+    // Track failure
+    await trackFailure(receiptId, errorMessage);
 
     throw error; // Re-throw so workflow records the failure
   }
