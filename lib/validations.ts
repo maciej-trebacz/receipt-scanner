@@ -57,7 +57,7 @@ export const updateReceiptSchema = z.object({
   tax: z.number().nonnegative().max(10000000).optional().nullable(),
   total: z.number().positive().max(10000000).optional(),
   notes: z.string().max(2000).optional().nullable(),
-  categoryId: z.string().uuid().optional().nullable(),
+  categoryId: z.union([z.string().uuid(), z.literal("")]).optional().nullable().transform(v => v || null),
   items: z.array(receiptItemSchema).max(500).optional(),
 });
 

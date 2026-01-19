@@ -295,7 +295,10 @@ export function useUpdateReceipt() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to update receipt");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || "Failed to update receipt");
+      }
       return res.json();
     },
     onSuccess: (data, { id }) => {

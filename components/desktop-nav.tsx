@@ -34,8 +34,8 @@ export function DesktopNav() {
             <Image
               src="/logo-64.png"
               alt="Paragone"
-              width={36}
-              height={36}
+              width={28}
+              height={28}
               className="group-hover:scale-110 transition-transform"
             />
             <span className="text-lg font-black tracking-tight">

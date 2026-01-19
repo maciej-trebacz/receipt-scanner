@@ -97,10 +97,15 @@ export default function ReceiptDetailPage({
 
   const handleSave = async (data: any) => {
     try {
-      await updateMutation.mutateAsync({ id, data });
+      // Clean up empty strings that should be null for UUID fields
+      const cleanedData = {
+        ...data,
+        categoryId: data.categoryId || null,
+      };
+      await updateMutation.mutateAsync({ id, data: cleanedData });
       setIsEditing(false);
     } catch (err) {
-      toast.error("Failed to save changes");
+      toast.error(err instanceof Error ? err.message : "Failed to save changes");
     }
   };
 

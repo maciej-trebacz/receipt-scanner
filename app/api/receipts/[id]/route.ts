@@ -102,8 +102,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Error updating receipt:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to update receipt" },
+      { error: "Failed to update receipt", details: message },
       { status: 500 }
     );
   }
