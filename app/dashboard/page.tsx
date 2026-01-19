@@ -17,6 +17,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { receiptKeys } from "@/lib/hooks/use-receipts";
+import { uploadToStorage } from "@/lib/upload";
 
 interface WeeklyStats {
   totalSpent: number;
@@ -61,16 +62,19 @@ export default function DashboardPage() {
       });
   }, []);
 
-  // Handle single capture - queue for async processing
+  // Handle single capture - upload directly to Supabase, then queue for processing
   const handleScan = async (file: File) => {
     setIsLoading(true);
-    const formData = new FormData();
-    formData.append("files", file);
 
     try {
+      // Upload directly to Supabase Storage (bypasses 4.5MB Vercel limit)
+      const { storagePath } = await uploadToStorage(file);
+
+      // Queue for async processing
       const res = await fetch("/api/receipts/queue", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storagePaths: [storagePath] }),
       });
 
       if (!res.ok) {
@@ -85,11 +89,10 @@ export default function DashboardPage() {
         return;
       }
 
-      // Invalidate queries to show the new pending receipt
       queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
     } catch (err) {
       toast.error("Upload failed", {
-        description: "Please try again",
+        description: err instanceof Error ? err.message : "Please try again",
       });
     } finally {
       setIsLoading(false);

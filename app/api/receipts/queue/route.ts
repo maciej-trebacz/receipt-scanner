@@ -1,29 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { processReceiptWorkflow } from "@/lib/workflows/process-receipt";
-import { getServerSupabaseClient, createReceipt, updateReceiptStatus } from "@/lib/db";
+import { createReceipt, updateReceiptStatus } from "@/lib/db";
 import { v4 as uuid } from "uuid";
 import { requireAuthWithUser } from "@/lib/auth";
 import { hasCredits } from "@/lib/credits";
-import { validateFile, MAX_FILE_SIZE } from "@/lib/validations";
-import sharp from "sharp";
-import decode from "heic-decode";
+import { z } from "zod";
 
-// Storage bucket name for receipt images
-const STORAGE_BUCKET = "receipts";
+const queueRequestSchema = z.object({
+  storagePaths: z.array(z.string().min(1)).min(1).max(50),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await requireAuthWithUser();
-    const formData = await request.formData();
-    const files = formData.getAll("files") as File[];
+    const body = await request.json();
 
-    if (!files.length) {
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    const parsed = queueRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request: storagePaths array required" },
+        { status: 400 }
+      );
     }
 
+    const { storagePaths } = parsed.data;
+
     // Check if user has enough credits for all files
-    const creditsNeeded = files.length;
+    const creditsNeeded = storagePaths.length;
     if (!(await hasCredits(userId, creditsNeeded))) {
       return NextResponse.json(
         {
@@ -34,88 +38,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate all files first (type and size)
-    for (const file of files) {
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        return NextResponse.json(
-          { error: `${file.name}: ${validation.error}` },
-          { status: 400 }
-        );
-      }
-    }
-
-    const supabase = getServerSupabaseClient();
-
     const queuedReceipts: Array<{
       id: string;
       imagePath: string;
       filename: string;
     }> = [];
 
-    for (const file of files) {
-      const originalExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const isHeic = originalExt === "heic" || originalExt === "heif";
-
-      // Convert HEIC/HEIF to JPEG for browser compatibility
-      let fileBuffer: Buffer;
-      let contentType: string;
-      let ext: string;
-
-      if (isHeic) {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        // Decode HEIC to raw pixels, then encode as JPEG with sharp
-        const { width, height, data } = await decode({ buffer });
-        fileBuffer = await sharp(data, {
-          raw: { width, height, channels: 4 },
-        })
-          .jpeg({ quality: 90 })
-          .toBuffer();
-        contentType = "image/jpeg";
-        ext = "jpg";
-      } else {
-        const bytes = await file.arrayBuffer();
-        fileBuffer = Buffer.from(bytes);
-        contentType = file.type;
-        ext = originalExt;
-      }
-
-      const filename = `${uuid()}-${Date.now()}.${ext}`;
-      const storagePath = `uploads/${filename}`;
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(storagePath, fileBuffer, {
-          contentType,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        return NextResponse.json(
-          { error: `Failed to upload file: ${file.name}` },
-          { status: 500 }
-        );
-      }
-
-      // Store the path in format: bucket/path (used to retrieve from storage)
-      const imagePath = `${STORAGE_BUCKET}/${storagePath}`;
+    for (const storagePath of storagePaths) {
       const receiptId = uuid();
+      const filename = storagePath.split("/").pop() || storagePath;
 
-      // Create pending receipt record using centralized query function
+      // Create pending receipt record
       await createReceipt({
         id: receiptId,
         userId,
-        imagePath: imagePath,
-        total: 0, // Placeholder, will be updated by workflow
+        imagePath: storagePath,
+        total: 0,
         status: "pending",
       });
 
-      // Start workflow - if this fails, mark receipt as failed to avoid stuck state
+      // Start workflow
       try {
-        await start(processReceiptWorkflow, [receiptId, imagePath]);
+        await start(processReceiptWorkflow, [receiptId, storagePath]);
       } catch (workflowError) {
         console.error("Failed to start workflow:", workflowError);
         await updateReceiptStatus(
@@ -131,7 +75,7 @@ export async function POST(request: NextRequest) {
 
       queuedReceipts.push({
         id: receiptId,
-        imagePath: imagePath,
+        imagePath: storagePath,
         filename,
       });
     }

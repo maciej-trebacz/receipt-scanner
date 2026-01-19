@@ -13,8 +13,8 @@ Mobile-first web app to scan receipts via camera/upload, extract data with AI, a
 
 ## Status
 
-**Phase**: 6 Complete (Async Processing)
-**Tests**: 20 passing
+**Phase**: 6 Complete (Async Processing + Direct Upload)
+**Tests**: 133 passing
 **Next**: Phase 7 (Polish) or Phase 8 (Test Coverage)
 
 ## Tech Stack
@@ -53,7 +53,9 @@ bun lib/db/seed.ts         # Seed default categories
 receipt-scanner/
 ├── app/
 │   ├── api/
-│   │   ├── upload/route.ts           # Image upload
+│   │   ├── upload/
+│   │   │   ├── route.ts              # Legacy image upload
+│   │   │   └── signed-url/route.ts   # Signed URL for direct Supabase upload
 │   │   ├── scan/route.ts             # Gemini OCR (legacy sync)
 │   │   ├── receipts/
 │   │   │   ├── route.ts              # List/Create receipts
@@ -96,6 +98,7 @@ receipt-scanner/
 │   ├── reports.ts                    # Reports query helpers
 │   ├── gemini.ts                     # AI extraction
 │   ├── gemini.test.ts                # Parsing tests
+│   ├── upload.ts                     # Client-side direct Supabase upload
 │   └── utils.ts
 ├── data/
 │   ├── receipts.db                   # SQLite database
@@ -127,6 +130,7 @@ CLERK_WEBHOOK_SECRET=whsec_...
 # Database & Storage (Supabase)
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=  # For signed upload URLs (server-side only)
 ```
 
 ## Completed Features
@@ -158,14 +162,22 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - [x] **Bulk upload with drag-drop**
 - [x] **Real-time status updates via SSE**
 - [x] **Receipt status badges (pending/processing/completed/failed)**
+- [x] **Direct Supabase upload (bypasses 4.5MB Vercel limit)**
 
 ## Async Processing API
 
 ```
-POST /api/receipts/queue     # Upload images, start workflow
+POST /api/upload/signed-url  # Get signed URL for direct Supabase upload
+POST /api/receipts/queue     # Queue receipt processing (accepts storagePaths)
 POST /api/receipts/status    # Batch check status by IDs
 GET  /api/receipts/stream    # SSE for real-time updates
 ```
+
+**Upload Flow:**
+1. Client requests signed URL from `/api/upload/signed-url`
+2. Client uploads directly to Supabase Storage (bypasses Vercel 4.5MB limit)
+3. Client calls `/api/receipts/queue` with storage paths
+4. Workflow processes receipts asynchronously (includes HEIC→JPEG conversion)
 
 The workflow uses `"use workflow"` and `"use step"` directives for durable execution with automatic retries.
 

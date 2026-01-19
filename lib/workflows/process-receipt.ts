@@ -7,6 +7,8 @@ import {
 } from "@/lib/db";
 import { extractReceiptData } from "@/lib/gemini";
 import { deductCredit } from "@/lib/credits";
+import sharp from "sharp";
+import decode from "heic-decode";
 
 type ReceiptStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -21,20 +23,17 @@ async function updateReceiptStatus(
   await dbUpdateReceiptStatus(receiptId, status, errorMessage);
 }
 
-// Step: Download image from Supabase Storage and convert to base64
+// Step: Download image from Supabase Storage, convert HEIC if needed, return as base64
 async function loadImageAsBase64(
   imagePath: string
 ): Promise<{ base64: string; mimeType: string }> {
   "use step";
 
-  // imagePath is like "receipts/uploads/filename.jpg"
-  // Format: bucket/path - we need to split it
   const [bucket, ...pathParts] = imagePath.split("/");
   const storagePath = pathParts.join("/");
 
   const supabase = getServerSupabaseClient();
 
-  // Download file from Supabase Storage
   const { data, error } = await supabase.storage
     .from(bucket)
     .download(storagePath);
@@ -47,23 +46,35 @@ async function loadImageAsBase64(
     throw new FatalError("No data returned from storage download");
   }
 
-  // Convert Blob to base64
   const arrayBuffer = await data.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-
   const ext = imagePath.split(".").pop()?.toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    heic: "image/heic",
-  };
+  const isHeic = ext === "heic" || ext === "heif";
 
-  return {
-    base64,
-    mimeType: mimeTypes[ext || ""] || "image/jpeg",
-  };
+  let base64: string;
+  let mimeType: string;
+
+  if (isHeic) {
+    const buffer = Buffer.from(arrayBuffer);
+    const { width, height, data: pixels } = await decode({ buffer });
+    const jpegBuffer = await sharp(pixels, {
+      raw: { width, height, channels: 4 },
+    })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    base64 = jpegBuffer.toString("base64");
+    mimeType = "image/jpeg";
+  } else {
+    base64 = Buffer.from(arrayBuffer).toString("base64");
+    const mimeTypes: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+    };
+    mimeType = mimeTypes[ext || ""] || "image/jpeg";
+  }
+
+  return { base64, mimeType };
 }
 
 // Step: Call Gemini API to extract data (auto-retries on failure)
