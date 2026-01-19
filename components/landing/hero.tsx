@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Invoice02Icon } from "@hugeicons/core-free-icons";
@@ -34,17 +35,19 @@ export function Hero() {
         </div>
       </div>
 
-      {/* App screenshot placeholder */}
+      {/* App screenshot */}
       <div className="mt-16 relative">
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent z-10" />
         <div className="container px-6 max-w-5xl mx-auto">
-          <div className="relative mx-auto max-w-4xl rounded-2xl border border-border/50 bg-muted/30 shadow-2xl overflow-hidden glass">
-            <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-              <div className="text-center">
-                <HugeiconsIcon icon={Invoice02Icon} className="size-16 text-primary/30 mx-auto mb-4" />
-                <span className="text-muted-foreground text-sm">App Preview</span>
-              </div>
-            </div>
+          <div className="relative mx-auto max-w-4xl rounded-2xl border border-border/50 shadow-2xl overflow-hidden">
+            <Image
+              src="/app-preview.jpeg"
+              alt="Paragone app showing receipt scanning and expense tracking"
+              width={1920}
+              height={1200}
+              className="w-full h-auto"
+              priority
+            />
           </div>
         </div>
       </div>
