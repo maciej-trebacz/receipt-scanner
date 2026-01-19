@@ -149,6 +149,30 @@ export async function deleteUser(id: string): Promise<void> {
   }
 }
 
+export async function updateUser(
+  id: string,
+  data: { email?: string; name?: string | null }
+): Promise<void> {
+  const supabase = getServerSupabaseClient();
+
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (data.email !== undefined) {
+    updateData.email = data.email;
+  }
+  if (data.name !== undefined) {
+    updateData.name = data.name;
+  }
+
+  const { error } = await supabase.from("users").update(updateData).eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to update user: ${error.message}`);
+  }
+}
+
 export async function updateUserCredits(id: string, credits: number): Promise<void> {
   const supabase = getServerSupabaseClient();
 
