@@ -6,13 +6,7 @@ function resetMocks() {
   mockUsers = new Map();
 }
 
-// Mock supabase module to prevent actual DB connections during tests
-mock.module("@/lib/db/supabase", () => ({
-  getServerSupabaseClient: () => ({}),
-  createServerSupabaseClient: () => ({}),
-  createBrowserSupabaseClient: () => ({}),
-  createServiceRoleClient: () => ({}),
-}));
+// Note: @/lib/db/supabase is mocked globally in __tests__/setup.ts
 
 mock.module("@/lib/db/queries", () => ({
   createUser: async (data: { id: string; email: string; name: string | null }) => {

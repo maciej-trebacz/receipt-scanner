@@ -12,6 +12,29 @@ process.env.NODE_ENV = "test";
 export const TEST_USER_ID = "test-user-123";
 export const TEST_USER_EMAIL = "test@example.com";
 
+// Mock Supabase to prevent real database connections
+// This must be mocked before any module that imports from queries.ts
+mock.module("@/lib/db/supabase", () => ({
+  getServerSupabaseClient: () => ({
+    from: () => ({
+      select: () => ({ data: [], error: null }),
+      insert: () => ({ data: null, error: null }),
+      update: () => ({ data: null, error: null }),
+      delete: () => ({ data: null, error: null }),
+    }),
+    storage: {
+      from: () => ({
+        download: () => ({ data: null, error: null }),
+        upload: () => ({ data: null, error: null }),
+        createSignedUploadUrl: () => ({ data: null, error: null }),
+      }),
+    },
+  }),
+  createServerSupabaseClient: () => ({}),
+  createBrowserSupabaseClient: () => ({}),
+  createServiceRoleClient: () => ({}),
+}));
+
 // Mock Clerk auth by default
 mock.module("@clerk/nextjs/server", () => ({
   auth: async () => ({ userId: TEST_USER_ID }),
