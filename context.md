@@ -1,8 +1,15 @@
-# Receipt Scanner
+# Paragone
 
 ## Overview
 
 Mobile-first web app to scan receipts via camera/upload, extract data with AI, and track expenses with reports.
+
+## Production
+
+- **URL**: https://paragone.app
+- **Hosting**: Vercel
+- **Auth**: Clerk (production instance)
+- **Domain**: paragone.app (DNS on Vercel)
 
 ## Status
 
@@ -21,7 +28,9 @@ Mobile-first web app to scan receipts via camera/upload, extract data with AI, a
 | Styling | Tailwind CSS 4 |
 | Components | Shadcn (radix-maia style) |
 | Icons | Hugeicons |
-| Database | SQLite (libsql) + Drizzle ORM |
+| Auth | Clerk |
+| Database | Supabase (Postgres) + Drizzle ORM |
+| Storage | Supabase Storage |
 | AI | Gemini 2.0 Flash |
 | Async | Vercel Workflow (durable execution) |
 
@@ -107,7 +116,17 @@ Receipt status: `pending` | `processing` | `completed` | `failed`
 ## Environment Variables
 
 ```env
-GEMINI_API_KEY=your_key_here
+# AI
+GEMINI_API_KEY=
+
+# Auth (Clerk)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+CLERK_WEBHOOK_SECRET=whsec_...
+
+# Database & Storage (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 ## Completed Features
