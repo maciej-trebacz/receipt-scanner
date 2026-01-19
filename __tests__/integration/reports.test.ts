@@ -1,6 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { NextRequest } from "next/server";
-import { getDateRange } from "@/lib/reports";
 
 function mockRequest(url: string): NextRequest {
   return new NextRequest(new URL(url, "http://localhost:3000"));
@@ -27,6 +26,57 @@ const mockByDay = [
   { date: "2024-12-01", totalSpent: 50 },
   { date: "2024-12-02", totalSpent: 75 },
 ];
+
+// Inline implementation of getDateRange for mocking (avoids importing from real module)
+function getDateRange(period: "week" | "month" | "year" | "all", offset: number = 0) {
+  const now = new Date();
+  let start: Date;
+  let end: Date;
+  let label: string;
+
+  switch (period) {
+    case "week": {
+      const dayOfWeek = now.getDay();
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      start = new Date(now);
+      start.setDate(now.getDate() - diff + offset * 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 7);
+      const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endDisplay = new Date(end);
+      endDisplay.setDate(endDisplay.getDate() - 1);
+      const endStr = endDisplay.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      label = `${startStr} - ${endStr}`;
+      break;
+    }
+    case "month": {
+      start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
+      label = start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      break;
+    }
+    case "year": {
+      start = new Date(now.getFullYear() + offset, 0, 1);
+      end = new Date(now.getFullYear() + offset + 1, 0, 1);
+      label = start.getFullYear().toString();
+      break;
+    }
+    case "all":
+    default: {
+      start = new Date(0);
+      end = new Date(now.getTime() + 86400000);
+      label = "All Time";
+      break;
+    }
+  }
+
+  if (offset === 0 && period !== "all") {
+    end = new Date(now.getTime() + 86400000);
+  }
+
+  return { start, end, label };
+}
 
 mock.module("@/lib/reports", () => ({
   getDateRange,

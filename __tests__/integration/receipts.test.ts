@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach } from "bun:test";
 import { NextRequest } from "next/server";
-import { v4 as uuid } from "uuid";
 import {
   createTestReceipt,
   createTestReceiptItem,
@@ -18,6 +17,71 @@ let mockItems: Map<string, ReturnType<typeof createTestReceiptItem>[]>;
 function resetMocks() {
   mockReceipts = new Map();
   mockItems = new Map();
+
+  // Configure global mock handlers for this test file
+  globalThis.mockQueryHandlers = {
+    getReceiptById: async (id: string) => {
+      const receipt = mockReceipts.get(id);
+      if (!receipt) return null;
+      return {
+        ...receipt,
+        items: mockItems.get(id) || [],
+      };
+    },
+    receiptExists: async (id: string) => mockReceipts.has(id),
+    updateReceipt: async (
+      id: string,
+      data: Partial<ReturnType<typeof createTestReceipt>>
+    ) => {
+      const existing = mockReceipts.get(id);
+      if (!existing) throw new Error("Receipt not found");
+      const updated = { ...existing, ...data, updatedAt: new Date() };
+      mockReceipts.set(id, updated);
+      return { ...updated, items: mockItems.get(id) || [] };
+    },
+    deleteReceipt: async (id: string) => {
+      mockReceipts.delete(id);
+      mockItems.delete(id);
+      return { success: true };
+    },
+    listReceipts: async (params: {
+      userId: string;
+      categoryId?: string;
+      cursor?: string;
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+    }) => {
+      let receipts = Array.from(mockReceipts.values()).filter(
+        (r) => r.userId === params.userId
+      );
+      if (params.categoryId) {
+        receipts = receipts.filter((r) => r.categoryId === params.categoryId);
+      }
+      const limit = params.limit || 20;
+      const hasMore = receipts.length > limit;
+      return {
+        receipts: receipts.slice(0, limit),
+        nextCursor: hasMore ? receipts[limit - 1].id : null,
+        hasMore,
+      };
+    },
+    createReceipt: async (
+      data: ReturnType<typeof createTestReceipt> & { items?: unknown[] }
+    ) => {
+      const { items, ...receiptData } = data;
+      mockReceipts.set(data.id, receiptData as ReturnType<typeof createTestReceipt>);
+      if (items) {
+        mockItems.set(
+          data.id,
+          items.map((item, i) =>
+            createTestReceiptItem(data.id, { ...(item as object), sortOrder: i })
+          )
+        );
+      }
+      return { ...receiptData, items: mockItems.get(data.id) || [] };
+    },
+  };
 }
 
 function mockRequest(
@@ -35,72 +99,7 @@ function mockRequest(
   return new NextRequest(new URL(url, "http://localhost:3000"), init);
 }
 
-// Mock the database queries
-mock.module("@/lib/db/queries", () => ({
-  getReceiptById: async (id: string) => {
-    const receipt = mockReceipts.get(id);
-    if (!receipt) return null;
-    return {
-      ...receipt,
-      items: mockItems.get(id) || [],
-    };
-  },
-  receiptExists: async (id: string) => mockReceipts.has(id),
-  updateReceipt: async (
-    id: string,
-    data: Partial<ReturnType<typeof createTestReceipt>>
-  ) => {
-    const existing = mockReceipts.get(id);
-    if (!existing) throw new Error("Receipt not found");
-    const updated = { ...existing, ...data, updatedAt: new Date() };
-    mockReceipts.set(id, updated);
-    return { ...updated, items: mockItems.get(id) || [] };
-  },
-  deleteReceipt: async (id: string) => {
-    mockReceipts.delete(id);
-    mockItems.delete(id);
-    return { success: true };
-  },
-  listReceipts: async (params: {
-    userId: string;
-    categoryId?: string;
-    cursor?: string;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-  }) => {
-    let receipts = Array.from(mockReceipts.values()).filter(
-      (r) => r.userId === params.userId
-    );
-    if (params.categoryId) {
-      receipts = receipts.filter((r) => r.categoryId === params.categoryId);
-    }
-    const limit = params.limit || 20;
-    const hasMore = receipts.length > limit;
-    return {
-      receipts: receipts.slice(0, limit),
-      nextCursor: hasMore ? receipts[limit - 1].id : null,
-      hasMore,
-    };
-  },
-  createReceipt: async (
-    data: ReturnType<typeof createTestReceipt> & { items?: unknown[] }
-  ) => {
-    const { items, ...receiptData } = data;
-    mockReceipts.set(data.id, receiptData as ReturnType<typeof createTestReceipt>);
-    if (items) {
-      mockItems.set(
-        data.id,
-        items.map((item, i) =>
-          createTestReceiptItem(data.id, { ...(item as object), sortOrder: i })
-        )
-      );
-    }
-    return { ...receiptData, items: mockItems.get(data.id) || [] };
-  },
-}));
-
-// Import routes after mocking
+// Import routes (mocks are configured in setup.ts)
 const { GET, PUT, DELETE } = await import("@/app/api/receipts/[id]/route");
 const { GET: ListReceipts, POST: CreateReceipt } = await import(
   "@/app/api/receipts/route"

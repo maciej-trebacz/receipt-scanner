@@ -4,29 +4,28 @@ let mockUsers: Map<string, { id: string; email: string; name: string | null }>;
 
 function resetMocks() {
   mockUsers = new Map();
+
+  // Configure global mock handlers for this test file
+  globalThis.mockQueryHandlers = {
+    createUser: async (data: { id: string; email: string; name: string | null }) => {
+      mockUsers.set(data.id, data);
+      return { ...data, credits: 5, createdAt: new Date(), updatedAt: new Date() };
+    },
+    deleteUser: async (id: string) => {
+      mockUsers.delete(id);
+      return { success: true };
+    },
+    updateUser: async (id: string, data: { email?: string; name?: string | null }) => {
+      const existing = mockUsers.get(id);
+      if (existing) {
+        const updated = { ...existing, ...data };
+        mockUsers.set(id, updated);
+        return updated;
+      }
+      return null;
+    },
+  };
 }
-
-// Note: @/lib/db/supabase is mocked globally in __tests__/setup.ts
-
-mock.module("@/lib/db/queries", () => ({
-  createUser: async (data: { id: string; email: string; name: string | null }) => {
-    mockUsers.set(data.id, data);
-    return { ...data, credits: 5, createdAt: new Date(), updatedAt: new Date() };
-  },
-  deleteUser: async (id: string) => {
-    mockUsers.delete(id);
-    return { success: true };
-  },
-  updateUser: async (id: string, data: { email?: string; name?: string | null }) => {
-    const existing = mockUsers.get(id);
-    if (existing) {
-      const updated = { ...existing, ...data };
-      mockUsers.set(id, updated);
-      return updated;
-    }
-    return null;
-  },
-}));
 
 mock.module("svix", () => ({
   Webhook: class {
