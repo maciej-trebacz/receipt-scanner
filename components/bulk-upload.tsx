@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -8,12 +8,12 @@ import {
   Loading03Icon,
   Tick02Icon,
   Cancel01Icon,
-  Image01Icon,
   Delete02Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createImagePreview } from "@/lib/image-utils";
+import { uploadToStorage } from "@/lib/upload";
 
 interface QueuedReceipt {
   id: string;
@@ -78,53 +78,66 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
     if (files.length === 0) return;
 
     setIsUploading(true);
-    const allQueued: QueuedReceipt[] = [];
     const filesToUpload = [...files];
 
     setFiles([]);
     setFileIds([]);
     setPreviews(new Map());
 
-    // Upload files sequentially to avoid payload size limits
-    for (const file of filesToUpload) {
-      const formData = new FormData();
-      formData.append("files", file);
+    // Upload files directly to Supabase Storage in parallel
+    const uploadResults: Array<{ storagePath: string; filename: string } | null> = [];
 
-      try {
-        const res = await fetch("/api/receipts/queue", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({ error: "Upload failed" }));
+    await Promise.all(
+      filesToUpload.map(async (file, index) => {
+        try {
+          const { storagePath } = await uploadToStorage(file);
+          uploadResults[index] = { storagePath, filename: file.name };
+        } catch (error) {
           toast.error(`Failed to upload ${file.name}`, {
-            description: error.error || error.message || "Upload failed",
+            description: error instanceof Error ? error.message : "Upload failed",
           });
-          continue;
+          uploadResults[index] = null;
         }
+      })
+    );
 
-        const data = await res.json();
-        const receipt = data.receipts[0];
+    // Filter successful uploads
+    const successfulUploads = uploadResults.filter((r): r is { storagePath: string; filename: string } => r !== null);
 
-        const queued: QueuedReceipt = {
-          id: receipt.id,
-          filename: receipt.filename,
-          status: "pending",
-          imagePath: receipt.imagePath,
-        };
-
-        allQueued.push(queued);
-        setQueued([...allQueued]);
-      } catch (error) {
-        toast.error(`Failed to upload ${file.name}`);
-      }
+    if (successfulUploads.length === 0) {
+      setIsUploading(false);
+      return;
     }
 
-    if (allQueued.length > 0) {
-      // Start listening for status updates
+    // Queue all uploaded files for processing
+    try {
+      const res = await fetch("/api/receipts/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storagePaths: successfulUploads.map((u) => u.storagePath) }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Queue failed" }));
+        toast.error("Failed to queue receipts", {
+          description: error.error || error.message || "Queue failed",
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      const data = await res.json();
+      const allQueued: QueuedReceipt[] = data.receipts.map((receipt: { id: string; filename: string; imagePath: string }) => ({
+        id: receipt.id,
+        filename: receipt.filename,
+        status: "pending" as const,
+        imagePath: receipt.imagePath,
+      }));
+
+      setQueued(allQueued);
       pollStatus(allQueued.map((r) => r.id));
-    } else {
+    } catch (error) {
+      toast.error("Failed to queue receipts");
       setIsUploading(false);
     }
   };
@@ -227,6 +240,7 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
               className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50"
             >
               {receipt.imagePath && (
+                // oxlint-disable-next-line nextjs/no-img-element -- dynamic user content
                 <img
                   src={`/api/image/${receipt.imagePath}`}
                   alt=""
@@ -299,9 +313,10 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
       </div>
 
       {/* Drop zone */}
-      <div
+      <button
+        type="button"
         className={cn(
-          "border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer",
+          "w-full border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer",
           isDragging
             ? "border-primary bg-primary/5"
             : "border-border/50 hover:border-primary/50"
@@ -329,7 +344,7 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
         <p className="text-xs text-muted-foreground mt-2">
           Supports JPEG, PNG, WebP, HEIC
         </p>
-      </div>
+      </button>
 
       {/* File previews */}
       {files.length > 0 && (
@@ -343,6 +358,7 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
               return (
                 <div key={id} className="relative group">
                   {preview ? (
+                    // oxlint-disable-next-line nextjs/no-img-element -- dynamic user content
                     <img
                       src={preview}
                       alt=""

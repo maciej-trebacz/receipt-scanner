@@ -133,6 +133,7 @@ export function ReceiptCapture({
       ) : (
         <div className="space-y-4">
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl glass shadow-2xl">
+            {/* oxlint-disable-next-line nextjs/no-img-element -- dynamic user content */}
             <img
               src={preview}
               alt="Receipt preview"

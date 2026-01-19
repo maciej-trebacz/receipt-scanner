@@ -409,12 +409,12 @@ export default function ReceiptDetailPage({
                         aspectRatio: cropStyles.containerAspectRatio,
                       } : undefined}
                     >
+                      {/* oxlint-disable-next-line nextjs/no-img-element -- dynamic user content with transform cropping */}
                       <img
                         src={`/api/image/${receipt.imagePath}`}
                         alt="Receipt"
                         className="w-full h-auto"
                         style={cropStyles ? {
-                          // Use transform for cropping - uniform scale preserves aspect ratio
                           transformOrigin: '0 0',
                           transform: `scale(${cropStyles.scale}) translate(${cropStyles.translateX}%, ${cropStyles.translateY}%)`,
                         } : undefined}
