@@ -58,7 +58,7 @@ export function DesktopNav() {
                   className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary/10 text-primary-text"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >

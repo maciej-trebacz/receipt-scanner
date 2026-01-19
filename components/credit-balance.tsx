@@ -28,7 +28,7 @@ export function CreditBalance() {
         "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-bold transition-all hover:scale-105",
         isEmpty && "bg-destructive/10 text-destructive hover:bg-destructive/20",
         isLow && !isEmpty && "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20",
-        !isLow && "bg-primary/10 text-primary hover:bg-primary/20"
+        !isLow && "bg-primary/10 text-primary-text hover:bg-primary/20"
       )}
     >
       <HugeiconsIcon icon={Coins01Icon} className="size-4" />

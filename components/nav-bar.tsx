@@ -75,7 +75,7 @@ export function NavBar() {
               "absolute -top-2 -right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold shadow-lg",
               isEmpty && "bg-destructive text-white",
               isLow && !isEmpty && "bg-amber-500 text-white",
-              !isLow && "bg-background text-primary border border-primary/20"
+              !isLow && "bg-background text-primary-text border border-primary/20"
             )}
           >
             <HugeiconsIcon icon={Coins01Icon} className="size-3" />
