@@ -7,6 +7,7 @@ import {
 } from "@/lib/db";
 import { extractReceiptData } from "@/lib/gemini";
 import { deductCredit } from "@/lib/credits";
+import { getPostHogClient } from "@/lib/posthog-server";
 import sharp from "sharp";
 import decode from "heic-decode";
 
@@ -161,6 +162,23 @@ export async function processReceiptWorkflow(
     // Deduct credit after successful processing
     await deductCreditForReceipt(receiptId);
 
+    // Track successful processing
+    const receipt = await getReceiptSimple(receiptId);
+    if (receipt?.userId) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: receipt.userId,
+        event: "receipt_processing_completed",
+        properties: {
+          receipt_id: receiptId,
+          store_name: extractedData.storeName,
+          total_amount: extractedData.total,
+          currency: extractedData.currency,
+          item_count: extractedData.items.length,
+        },
+      });
+    }
+
     return { success: true, receiptId };
   } catch (error) {
     // Mark as failed with error message
@@ -169,6 +187,20 @@ export async function processReceiptWorkflow(
       "failed",
       error instanceof Error ? error.message : "Unknown error"
     );
+
+    // Track processing failure
+    const receipt = await getReceiptSimple(receiptId);
+    if (receipt?.userId) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: receipt.userId,
+        event: "receipt_processing_failed",
+        properties: {
+          receipt_id: receiptId,
+          error_message: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
+    }
 
     throw error; // Re-throw so workflow records the failure
   }

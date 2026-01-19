@@ -2,6 +2,7 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { createUser, deleteUser, updateUser } from "@/lib/db/queries";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -42,6 +43,26 @@ export async function POST(req: Request) {
 
     try {
       await createUser({ id, email: email!, name });
+
+      // Track user creation and identify in PostHog
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: id,
+        event: "user_created",
+        properties: {
+          email,
+          name,
+          source: "clerk_webhook",
+        },
+      });
+      posthog.identify({
+        distinctId: id,
+        properties: {
+          email,
+          name,
+          created_at: new Date().toISOString(),
+        },
+      });
     } catch (err) {
       console.error("Failed to create user:", err);
       return new Response("Failed to create user", { status: 500 });
@@ -53,6 +74,16 @@ export async function POST(req: Request) {
     if (id) {
       try {
         await deleteUser(id);
+
+        // Track user deletion
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: id,
+          event: "user_deleted",
+          properties: {
+            source: "clerk_webhook",
+          },
+        });
       } catch (err) {
         console.error("Failed to delete user:", err);
         return new Response("Failed to delete user", { status: 500 });

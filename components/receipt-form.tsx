@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import posthog from "posthog-js";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,11 @@ import {
   Delete02Icon,
   PlusSignIcon,
   Store01Icon,
-  Calendar03Icon,
   Invoice01Icon,
   Note01Icon,
   PercentIcon,
   Tag01Icon
 } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
 
 interface ReceiptItem {
   name: string;
@@ -108,7 +106,19 @@ export function ReceiptForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(formData);
+    try {
+      await onSubmit(formData);
+      posthog.capture("receipt_saved", {
+        store_name: formData.storeName || "unknown",
+        total_amount: formData.total,
+        currency: formData.currency,
+        item_count: formData.items.length,
+        has_category: !!formData.categoryId,
+      });
+    } catch (err) {
+      posthog.captureException(err);
+      throw err;
+    }
   };
 
   return (

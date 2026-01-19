@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import posthog from "posthog-js";
 import { PeriodSelector, type Period } from "@/components/period-selector";
 import { SpendingChart } from "@/components/spending-chart";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -60,6 +61,14 @@ export default function ReportsPage() {
       .then((data) => {
         setData(data);
         setLoading(false);
+
+        // Track reports viewed
+        posthog.capture("reports_viewed", {
+          period,
+          offset,
+          total_spent: data.summary?.totalSpent || 0,
+          receipt_count: data.summary?.receiptCount || 0,
+        });
       })
       .catch((err) => {
         setError(err.message);

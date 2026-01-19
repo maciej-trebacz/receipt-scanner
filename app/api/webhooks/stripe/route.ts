@@ -2,6 +2,7 @@ import { stripe } from "@/lib/stripe";
 import { addCredits } from "@/lib/credits";
 import { headers } from "next/headers";
 import type Stripe from "stripe";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -51,6 +52,20 @@ export async function POST(req: Request) {
         `Purchased ${credits} credits`
       );
       console.log(`Added ${credits} credits for user ${userId}`);
+
+      // Track successful credit purchase
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: userId,
+        event: "credits_purchased",
+        properties: {
+          credits,
+          package_id: session.metadata?.packageId,
+          payment_intent: paymentIntent,
+          amount_total: session.amount_total,
+          currency: session.currency,
+        },
+      });
     } catch (error) {
       console.error("Failed to add credits:", error);
       return Response.json({ error: "Failed to add credits" }, { status: 500 });

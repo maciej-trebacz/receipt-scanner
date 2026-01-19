@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import {
   Card,
   CardContent,
@@ -15,11 +15,18 @@ import { CREDIT_PACKAGES, type CreditPackage } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 
 export default function CreditsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
   const handlePurchase = async (pkg: CreditPackage) => {
     setLoading(pkg.id);
+
+    // Track checkout started
+    posthog.capture("checkout_started", {
+      package_id: pkg.id,
+      package_credits: pkg.credits,
+      package_price: pkg.price / 100,
+    });
+
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -37,6 +44,7 @@ export default function CreditsPage() {
         window.location.href = data.url;
       }
     } catch (error) {
+      posthog.captureException(error);
       toast.error("Failed to start checkout");
       setLoading(null);
     }

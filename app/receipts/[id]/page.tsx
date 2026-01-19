@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -112,8 +113,12 @@ export default function ReceiptDetailPage({
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync(id);
+      posthog.capture("receipt_deleted", {
+        receipt_id: id,
+      });
       router.push("/receipts");
     } catch (err) {
+      posthog.captureException(err);
       toast.error("Failed to delete receipt");
     }
   };
@@ -121,7 +126,11 @@ export default function ReceiptDetailPage({
   const handleReanalyze = async () => {
     try {
       await reanalyzeMutation.mutateAsync(id);
+      posthog.capture("receipt_reanalyzed", {
+        receipt_id: id,
+      });
     } catch (err) {
+      posthog.captureException(err);
       toast.error(err instanceof Error ? err.message : "Failed to re-analyze receipt");
     }
   };

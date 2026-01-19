@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Upload01Icon,
@@ -76,6 +77,11 @@ export function BulkUpload({ onComplete, onClose }: BulkUploadProps) {
 
   const handleUpload = async () => {
     if (files.length === 0) return;
+
+    // Track bulk upload started
+    posthog.capture("bulk_upload_started", {
+      file_count: files.length,
+    });
 
     setIsUploading(true);
     const filesToUpload = [...files];

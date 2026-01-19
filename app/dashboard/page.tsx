@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import { ReceiptCapture } from "@/components/receipt-capture";
 import { ReceiptList } from "@/components/receipt-list";
 import { BulkUpload } from "@/components/bulk-upload";
@@ -90,7 +91,13 @@ export default function DashboardPage() {
       }
 
       queryClient.invalidateQueries({ queryKey: receiptKeys.lists() });
+
+      // Track successful upload
+      posthog.capture("receipt_uploaded", {
+        upload_type: "single",
+      });
     } catch (err) {
+      posthog.captureException(err);
       toast.error("Upload failed", {
         description: err instanceof Error ? err.message : "Please try again",
       });

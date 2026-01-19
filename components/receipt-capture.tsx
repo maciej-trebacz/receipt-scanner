@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import posthog from "posthog-js";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Camera01Icon,
@@ -65,6 +65,10 @@ export function ReceiptCapture({
 
   const handleConfirm = () => {
     if (selectedFile) {
+      posthog.capture("receipt_scan_confirmed", {
+        file_type: selectedFile.type,
+        file_size: selectedFile.size,
+      });
       onScan(selectedFile);
     }
   };
