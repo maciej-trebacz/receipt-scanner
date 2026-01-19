@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Paragon",
+  title: "Paragone",
   description: "Scan your receipts & track your spending with zero effort",
 };
 

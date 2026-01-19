@@ -38,7 +38,7 @@ export function DesktopNav() {
               />
             </div>
             <span className="text-lg font-black tracking-tight">
-              Receipt<span className="text-primary">Scanner</span>
+              Para<span className="text-primary">gone</span>
             </span>
           </Link>
 
