@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,6 @@ import {
   Invoice01Icon,
   Analytics01Icon,
   Add01Icon,
-  Invoice02Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { CreditBalance } from "./credit-balance";
@@ -30,13 +30,14 @@ export function DesktopNav() {
       <div className="glass border-b border-border/50">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between max-w-5xl">
           {/* Logo / Brand */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="size-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
-              <HugeiconsIcon
-                icon={Invoice02Icon}
-                className="size-5 text-primary-foreground stroke-[2.5]"
-              />
-            </div>
+          <Link href="/" className="flex items-center gap-2 group">
+            <Image
+              src="/logo-64.png"
+              alt="Paragone"
+              width={36}
+              height={36}
+              className="group-hover:scale-110 transition-transform"
+            />
             <span className="text-lg font-black tracking-tight">
               Para<span className="text-primary">gone</span>
             </span>
